@@ -1,6 +1,6 @@
-# SmartGreen AI
+# SmartGreen
 
-Projeto academico da Sprint 1 focado em autenticacao de usuarios para o sistema SmartGreen AI.
+Projeto academico da Sprint 1 focado em autenticacao de usuarios para o sistema SmartGreen.
 
 ## Escopo da Sprint 1
 
