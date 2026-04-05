@@ -1,6 +1,14 @@
 # SmartGreen AI
 
-Aplicação acadêmica completa para controle inteligente de semáforos em um cruzamento de quatro vias. O sistema monitora o fluxo de veículos, identifica a via com maior volume e aplica prioridade semafórica em tempo real.
+Projeto academico da Sprint 1 focado em autenticacao de usuarios para o sistema SmartGreen AI.
+
+## Escopo da Sprint 1
+
+- Tela de login
+- Tela de cadastro
+- Integracao frontend + backend
+- Persistencia de usuarios no banco de dados
+- Validacao de credenciais
 
 ## Tecnologias
 
@@ -14,192 +22,99 @@ Aplicação acadêmica completa para controle inteligente de semáforos em um cr
 ```text
 SmartGreen/
 |-- backend/
-|   |-- prisma/
-|   |   |-- schema.prisma
-|   |   `-- seed.ts
-|   |-- src/
-|   |   |-- auth/
-|   |   |   |-- dto/login.dto.ts
-|   |   |   |-- interfaces/jwt-payload.interface.ts
-|   |   |   |-- auth.controller.ts
-|   |   |   |-- auth.module.ts
-|   |   |   `-- auth.service.ts
-|   |   |-- common/
-|   |   |   `-- guards/jwt-auth.guard.ts
-|   |   |-- prisma/
-|   |   |   |-- prisma.module.ts
-|   |   |   `-- prisma.service.ts
-|   |   |-- traffic/
-|   |   |   |-- traffic.controller.ts
-|   |   |   |-- traffic.module.ts
-|   |   |   |-- traffic.service.ts
-|   |   |   `-- traffic.types.ts
-|   |   |-- app.module.ts
-|   |   `-- main.ts
-|   |-- .env.example
-|   |-- nest-cli.json
-|   |-- package.json
-|   |-- tsconfig.build.json
-|   `-- tsconfig.json
 |-- frontend/
-|   |-- app/
-|   |   |-- sistema/page.tsx
-|   |   |-- globals.css
-|   |   |-- layout.tsx
-|   |   `-- page.tsx
-|   |-- components/
-|   |   |-- auth/login-form.tsx
-|   |   `-- system/
-|   |       |-- intersection-view.tsx
-|   |       |-- lane-card.tsx
-|   |       |-- system-shell.tsx
-|   |       `-- system-summary.tsx
-|   |-- lib/
-|   |   |-- api.ts
-|   |   `-- auth-storage.ts
-|   |-- types/traffic.ts
-|   |-- .env.example
-|   |-- next-env.d.ts
-|   |-- next.config.ts
-|   |-- package.json
-|   |-- postcss.config.js
-|   |-- tailwind.config.ts
-|   `-- tsconfig.json
-|-- .gitignore
 |-- docker-compose.yml
+|-- .gitignore
 `-- README.md
 ```
 
-## Arquivos principais criados
+## Backend
 
-- `frontend/app/page.tsx`: página de login.
-- `frontend/app/sistema/page.tsx`: tela principal do sistema.
-- `frontend/components/system/intersection-view.tsx`: visualização do cruzamento de quatro vias.
-- `frontend/components/system/system-shell.tsx`: integração da tela principal com a API.
-- `backend/src/auth/*`: autenticação e emissão de token JWT.
-- `backend/src/traffic/*`: leitura do tráfego, simulação e priorização semafórica.
-- `backend/prisma/schema.prisma`: modelagem do banco de dados.
-- `backend/prisma/seed.ts`: dados de demonstração.
-- `docker-compose.yml`: MySQL pronto para subir localmente.
+Principais arquivos:
 
-## Configuração do MySQL
+- `backend/src/autenticacao/autenticacao.controller.ts`
+- `backend/src/autenticacao/autenticacao.service.ts`
+- `backend/src/autenticacao/autenticacao.module.ts`
+- `backend/src/autenticacao/dto/cadastrar.dto.ts`
+- `backend/src/autenticacao/dto/entrar.dto.ts`
+- `backend/prisma/schema.prisma`
+- `backend/prisma/seed.ts`
 
-### Opção recomendada com Docker
+Rotas principais:
 
-Na raiz do projeto:
+- `POST /api/autenticacao/cadastrar`
+- `POST /api/autenticacao/entrar`
 
-```bash
-docker compose up -d mysql
-```
+## Frontend
 
-O banco será iniciado com:
+Principais arquivos:
 
-- Banco: `smartgreen_ai`
-- Usuário: `smartgreen`
-- Senha: `smartgreen`
-- Usuário root: `root`
-- Senha root: `root`
-- Porta: `3306`
+- `frontend/app/page.tsx`
+- `frontend/app/layout.tsx`
+- `frontend/app/globals.css`
+- `frontend/components/autenticacao/formulario-acesso.tsx`
+- `frontend/components/autenticacao/palco-controle-urbano.tsx`
 
-### String de conexão esperada
+## Banco de dados
 
-Use esta URL no backend:
+Entidade principal da Sprint 1:
 
-```env
-DATABASE_URL=mysql://smartgreen:smartgreen@localhost:3306/smartgreen_ai
-```
+- `User`
+
+Campos:
+
+- `id`
+- `name`
+- `email`
+- `passwordHash`
+- `createdAt`
+- `updatedAt`
 
 ## Como rodar o backend
 
-1. Acesse a pasta `backend`.
-2. Copie `.env.example` para `.env`.
-3. Instale as dependências:
+1. Entre na pasta `backend`
+2. Copie `.env.example` para `.env`
+3. Configure a conexao com o MySQL
+4. Rode:
 
 ```bash
 npm install
-```
-
-4. Gere o cliente Prisma:
-
-```bash
 npm run prisma:generate
-```
-
-5. Crie as tabelas no MySQL:
-
-```bash
 npm run prisma:migrate -- --name init
-```
-
-6. Popule os dados de demonstração:
-
-```bash
 npm run prisma:seed
-```
-
-7. Inicie a API:
-
-```bash
 npm run start:dev
 ```
 
-O backend ficará disponível em `http://localhost:4000/api`.
+Backend disponivel em:
+
+```text
+http://localhost:4000/api
+```
 
 ## Como rodar o frontend
 
-1. Acesse a pasta `frontend`.
-2. Copie `.env.example` para `.env.local`.
-3. Instale as dependências:
+1. Entre na pasta `frontend`
+2. Copie `.env.example` para `.env.local`
+3. Rode:
 
 ```bash
 npm install
-```
-
-4. Inicie o servidor:
-
-```bash
 npm run dev
 ```
 
-O frontend ficará disponível em `http://localhost:3000`.
+Frontend disponivel em:
 
-## Credenciais de demonstração
+```text
+http://localhost:3000
+```
+
+## Credenciais de demonstracao
 
 - E-mail: `professor@smartgreen.ai`
 - Senha: `smartgreen123`
 
-## Rotas principais da API
+## Observacoes
 
-- `POST /api/auth/login`
-- `GET /api/traffic-control/overview`
-- `POST /api/traffic-control/simulate`
-
-## Entidades do banco
-
-- `User`
-- `Lane`
-- `TrafficFlowReading`
-- `TrafficLight`
-
-## Como funciona a lógica de prioridade
-
-1. O backend mantém as quatro vias cadastradas.
-2. A cada simulação, o sistema gera um novo volume de veículos para cada via.
-3. A via com maior quantidade de veículos recebe prioridade.
-4. Em caso de empate, a prioridade vai para a via que ficou mais tempo sem ser priorizada.
-5. A via prioritária recebe `GREEN` e as demais recebem `RED`.
-6. O semáforo central atualiza a mensagem de status e o tempo do ciclo conforme o volume detectado.
-
-## Experiência da interface
-
-- Tela de login com autenticação via API.
-- Tela principal com menu superior, cruzamento visual e atualização automática.
-- Destaque visual para a via priorizada.
-- Status atual do semáforo e volume por via.
-- Botão para simular novos dados em tempo real.
-
-## Observações finais
-
-- Todos os textos visíveis da interface estão em português.
-- Os nomes técnicos no código foram mantidos em inglês para facilitar manutenção.
-- O projeto está pronto para demonstração local acadêmica com dados simulados.
+- Todos os textos visiveis da interface estao em portugues
+- O backend segue estrutura orientada a objetos com classes, modulos, controllers e services
+- O frontend foi organizado em componentes reutilizaveis
