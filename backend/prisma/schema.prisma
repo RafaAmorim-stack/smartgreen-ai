@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum LaneKey {
+  NORTH
+  EAST
+  SOUTH
+  WEST
+}
+
+enum SignalColor {
+  RED
+  YELLOW
+  GREEN
+}
+
+enum TrafficLightMode {
+  AUTOMATIC
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Lane {
+  id                  String               @id @default(cuid())
+  key                 LaneKey              @unique
+  name                String
+  description         String
+  displayOrder        Int
+  currentVehicleCount Int                  @default(0)
+  signalColor         SignalColor          @default(RED)
+  lastPriorityAt      DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  trafficFlowReadings TrafficFlowReading[]
+  priorityTrafficLights TrafficLight[]     @relation("TrafficLightCurrentLane")
+}
+
+model TrafficFlowReading {
+  id           String   @id @default(cuid())
+  laneId        String
+  lane          Lane     @relation(fields: [laneId], references: [id], onDelete: Cascade)
+  vehicleCount Int
+  recordedAt   DateTime @default(now())
+
+  @@index([laneId, recordedAt])
+}
+
+model TrafficLight {
+  id                    String           @id @default(cuid())
+  name                  String
+  mode                  TrafficLightMode @default(AUTOMATIC)
+  statusText            String
+  cycleSeconds          Int              @default(30)
+  currentPriorityLaneId String?
+  currentPriorityLane   Lane?            @relation("TrafficLightCurrentLane", fields: [currentPriorityLaneId], references: [id])
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+}

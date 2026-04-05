@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --smartgreen-dark: #060b12;
+  --smartgreen-dark-soft: #101823;
+  --smartgreen-green: #2f6b2f;
+  --smartgreen-green-soft: #4b8a4b;
+  --smartgreen-line: #cfe3cf;
+}
+
+body {
+  min-height: 100vh;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+body,
+button,
+input,
+textarea,
+select {
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+}
+
+::selection {
+  background: var(--smartgreen-green);
+  color: #ffffff;
+}

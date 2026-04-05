@@ -1,0 +1,17 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: smartgreen-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: smartgreen_ai
+      MYSQL_USER: smartgreen
+      MYSQL_PASSWORD: smartgreen
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - smartgreen-mysql-data:/var/lib/mysql
+
+volumes:
+  smartgreen-mysql-data:
