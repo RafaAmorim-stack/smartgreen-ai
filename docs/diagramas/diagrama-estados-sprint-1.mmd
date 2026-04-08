@@ -1,0 +1,21 @@
+stateDiagram-v2
+    [*] --> TelaInicial
+
+    TelaInicial --> ModoLogin
+    TelaInicial --> ModoCadastro
+
+    ModoLogin --> ValidandoLogin : Entrar
+    ValidandoLogin --> SessaoAutenticada : credenciais validas
+    ValidandoLogin --> ErroLogin : credenciais invalidas
+    ErroLogin --> ModoLogin : tentar novamente
+
+    ModoCadastro --> ValidandoCadastro : Cadastrar
+    ValidandoCadastro --> CadastroConcluido : dados validos
+    ValidandoCadastro --> ErroCadastro : email duplicado ou dados invalidos
+    ErroCadastro --> ModoCadastro : corrigir dados
+
+    CadastroConcluido --> ModoLogin : voltar ao login
+    SessaoAutenticada --> EncerrandoSessao : encerrar sessao
+    EncerrandoSessao --> ModoLogin
+
+    ModoLogin --> [*]

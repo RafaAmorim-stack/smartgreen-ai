@@ -1,0 +1,89 @@
+classDiagram
+direction LR
+
+class PaginaInicial {
+  +render()
+}
+
+class PalcoControleUrbano {
+  +render()
+}
+
+class FormularioAcesso {
+  -modoAcesso: ModoAcesso
+  -nomeCompleto: string
+  -email: string
+  -senha: string
+  -carregando: boolean
+  -erro: string
+  -usuarioAutenticado: UsuarioSessao
+  +enviarFormulario()
+  +alterarModo()
+  +encerrarSessao()
+}
+
+class ClienteApiSmartGreen {
+  -urlBase: string
+  +entrar()
+  +cadastrar()
+}
+
+class ArmazenamentoSessao {
+  -chaveToken: string
+  -chaveUsuario: string
+  +salvarSessao()
+  +obterToken()
+  +obterUsuario()
+  +limparSessao()
+}
+
+class ControladorAutenticacao {
+  +cadastrar(dadosCadastro: CadastrarDto)
+  +entrar(dadosEntrada: EntrarDto)
+}
+
+class ServicoAutenticacao {
+  -prisma: PrismaService
+  -servicoJwt: JwtService
+  +cadastrar(dadosCadastro: CadastrarDto)
+  +entrar(dadosEntrada: EntrarDto)
+  -criarSessao(usuario: UsuarioAutenticado)
+}
+
+class PrismaService {
+  +onModuleInit()
+  +enableShutdownHooks()
+}
+
+class CadastrarDto {
+  +nomeCompleto: string
+  +email: string
+  +senha: string
+}
+
+class EntrarDto {
+  +email: string
+  +senha: string
+}
+
+class User {
+  +id: string
+  +name: string
+  +email: string
+  +passwordHash: string
+  +createdAt: DateTime
+  +updatedAt: DateTime
+}
+
+PaginaInicial --> PalcoControleUrbano
+PaginaInicial --> FormularioAcesso
+FormularioAcesso --> ClienteApiSmartGreen
+FormularioAcesso --> ArmazenamentoSessao
+ClienteApiSmartGreen ..> ControladorAutenticacao : HTTP
+ControladorAutenticacao --> ServicoAutenticacao
+ControladorAutenticacao ..> CadastrarDto
+ControladorAutenticacao ..> EntrarDto
+ServicoAutenticacao --> PrismaService
+ServicoAutenticacao ..> CadastrarDto
+ServicoAutenticacao ..> EntrarDto
+PrismaService --> User
