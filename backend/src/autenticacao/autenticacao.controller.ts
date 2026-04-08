@@ -19,7 +19,7 @@ export class ControladorAutenticacao {
   constructor(private readonly servicoAutenticacao: ServicoAutenticacao) {}
 
   @Post("cadastrar")
-  @ApiOperation({ summary: "Cadastrar novo usuario" })
+  @ApiOperation({ summary: "Cadastrar novo usuario no sistema" })
   @ApiCreatedResponse({
     description: "Usuario cadastrado e autenticado com sucesso.",
     type: RespostaAutenticacaoDto,
@@ -36,7 +36,7 @@ export class ControladorAutenticacao {
 
   @Post("entrar")
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: "Realizar login" })
+  @ApiOperation({ summary: "Realizar login do usuario" })
   @ApiOkResponse({
     description: "Login realizado com sucesso.",
     type: RespostaAutenticacaoDto,
