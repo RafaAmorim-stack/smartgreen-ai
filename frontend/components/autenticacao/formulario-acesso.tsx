@@ -6,10 +6,10 @@ import {
   UserRound,
   UserRoundPlus,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { armazenamentoSessao } from "@/servicos/armazenamento-sessao";
 import { clienteApi } from "@/servicos/cliente-api";
-import type { UsuarioSessao } from "@/tipos/trafego";
 
 type ModoAcesso = "entrar" | "cadastrar";
 
@@ -25,23 +25,22 @@ const conteudoModo = {
 } as const;
 
 export function FormularioAcesso() {
+  const roteador = useRouter();
   const [modoAcesso, setModoAcesso] = useState<ModoAcesso>("entrar");
   const [nomeCompleto, setNomeCompleto] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
-  const [usuarioAutenticado, setUsuarioAutenticado] =
-    useState<UsuarioSessao | null>(null);
 
   useEffect(() => {
     const token = armazenamentoSessao.obterToken();
     const usuarioSalvo = armazenamentoSessao.obterUsuario();
 
     if (token && usuarioSalvo) {
-      setUsuarioAutenticado(usuarioSalvo);
+      roteador.replace("/sistema");
     }
-  }, []);
+  }, [roteador]);
 
   const painelAtual = useMemo(() => conteudoModo[modoAcesso], [modoAcesso]);
 
@@ -54,7 +53,7 @@ export function FormularioAcesso() {
       if (modoAcesso === "entrar") {
         const resposta = await clienteApi.entrar({ email, senha });
         armazenamentoSessao.salvarSessao(resposta);
-        setUsuarioAutenticado(resposta.usuario);
+        roteador.replace("/sistema");
         return;
       }
 
@@ -91,48 +90,12 @@ export function FormularioAcesso() {
     setErro("Recuperacao de senha sera disponibilizada na proxima sprint.");
   }
 
-  function encerrarSessao() {
-    armazenamentoSessao.limparSessao();
-    setUsuarioAutenticado(null);
+  function limparFormulario() {
     setModoAcesso("entrar");
     setNomeCompleto("");
     setEmail("");
     setSenha("");
     setErro("");
-  }
-
-  if (usuarioAutenticado) {
-    return (
-      <div className="w-full max-w-[540px] rounded-[28px] border border-[var(--smartgreen-line)] bg-white p-6 shadow-[0_10px_32px_rgba(16,24,35,0.04)] sm:p-8">
-        <div className="space-y-8">
-          <div className="flex items-center justify-between">
-            <div className="h-1 w-16 bg-[var(--smartgreen-green)]" />
-
-            <button
-              type="button"
-              onClick={encerrarSessao}
-              className="border border-[var(--smartgreen-green)] px-4 py-2 text-sm font-medium text-[var(--smartgreen-green)]"
-            >
-              Encerrar sessao
-            </button>
-          </div>
-
-          <div className="space-y-6">
-            <div className="border-b border-[var(--smartgreen-line)] pb-4">
-              <p className="text-lg font-semibold text-slate-900">
-                {usuarioAutenticado.nome}
-              </p>
-            </div>
-
-            <div className="border-b border-[var(--smartgreen-line)] pb-4">
-              <p className="text-base text-slate-700">
-                {usuarioAutenticado.email}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -258,7 +221,17 @@ export function FormularioAcesso() {
                 Esqueceu a senha?
               </button>
             </div>
-          ) : null}
+          ) : (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={limparFormulario}
+                className="text-xs text-slate-400 underline underline-offset-4"
+              >
+                Limpar campos
+              </button>
+            </div>
+          )}
         </form>
       </div>
     </div>
