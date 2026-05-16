@@ -9,7 +9,7 @@ import {
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { armazenamentoSessao } from "@/servicos/armazenamento-sessao";
-import { clienteApi } from "@/servicos/cliente-api";
+import { clienteAutenticacao } from "@/servicos/cliente-autenticacao";
 
 type ModoAcesso = "entrar" | "cadastrar";
 
@@ -51,13 +51,13 @@ export function FormularioAcesso() {
 
     try {
       if (modoAcesso === "entrar") {
-        const resposta = await clienteApi.entrar({ email, senha });
+        const resposta = await clienteAutenticacao.entrar({ email, senha });
         armazenamentoSessao.salvarSessao(resposta);
         roteador.replace("/sistema");
         return;
       }
 
-      await clienteApi.cadastrar({
+      await clienteAutenticacao.cadastrar({
         nomeCompleto,
         email,
         senha,

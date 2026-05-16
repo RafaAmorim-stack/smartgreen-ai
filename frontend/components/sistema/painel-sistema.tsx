@@ -4,7 +4,9 @@ import { AlertTriangle, LogOut, RefreshCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { armazenamentoSessao } from "@/servicos/armazenamento-sessao";
-import { clienteApi, ErroApi } from "@/servicos/cliente-api";
+import { ClienteTrafego } from "@/servicos/interfaces/cliente-trafego";
+import { clienteTrafego } from "@/servicos/cliente-trafego";
+import { ErroApi } from "@/servicos/cliente-http";
 import type { UsuarioSessao, VisaoSistema, VisaoVia } from "@/tipos/trafego";
 import { ResumoSistema } from "./resumo-sistema";
 import { VisaoCruzamento } from "./visao-cruzamento";
@@ -41,6 +43,7 @@ function encontrarViaMaiorFluxo(vias: VisaoVia[]): VisaoVia | null {
 }
 
 export function PainelSistema() {
+  const servicoTrafego: ClienteTrafego = clienteTrafego;
   const roteador = useRouter();
   const [tokenAcesso, setTokenAcesso] = useState<string | null>(null);
   const [usuario, setUsuario] = useState<UsuarioSessao | null>(null);
@@ -59,7 +62,7 @@ export function PainelSistema() {
     const tokenSalvo = armazenamentoSessao.obterToken();
 
     if (!tokenSalvo) {
-      roteador.replace("/");
+      roteador.replace("/acesso");
       return;
     }
 
@@ -78,7 +81,7 @@ export function PainelSistema() {
     async function carregarVisaoInicial() {
       try {
         setErro(null);
-        const resposta = await clienteApi.obterVisaoGeral(tokenAtual);
+        const resposta = await servicoTrafego.obterVisaoGeral(tokenAtual);
 
         if (componenteAtivo) {
           setVisaoSistema(resposta);
@@ -94,7 +97,7 @@ export function PainelSistema() {
             erroCarregamento.statusCode === 403)
         ) {
           armazenamentoSessao.limparSessao();
-          roteador.replace("/");
+          roteador.replace("/acesso");
           return;
         }
 
@@ -115,7 +118,7 @@ export function PainelSistema() {
     return () => {
       componenteAtivo = false;
     };
-  }, [tokenAcesso, roteador]);
+  }, [roteador, servicoTrafego, tokenAcesso]);
 
   useEffect(() => {
     if (!visaoSistema) {
@@ -173,7 +176,7 @@ export function PainelSistema() {
     try {
       setAtualizando(true);
       setErro(null);
-      const resposta = await clienteApi.simular(tokenAcesso);
+      const resposta = await servicoTrafego.simular(tokenAcesso);
       setVisaoSistema(resposta);
       setSegundosRestantes(INTERVALO_ATUALIZACAO_AUTOMATICA);
     } catch (erroSimulacao) {
@@ -183,7 +186,7 @@ export function PainelSistema() {
           erroSimulacao.statusCode === 403)
       ) {
         armazenamentoSessao.limparSessao();
-        roteador.replace("/");
+        roteador.replace("/acesso");
         return;
       }
 
@@ -195,7 +198,7 @@ export function PainelSistema() {
     } finally {
       setAtualizando(false);
     }
-  }, [tokenAcesso, roteador]);
+  }, [roteador, servicoTrafego, tokenAcesso]);
 
   useEffect(() => {
     if (!tokenAcesso) {
