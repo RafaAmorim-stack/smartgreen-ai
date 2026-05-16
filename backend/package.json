@@ -4,10 +4,13 @@
   "version": "0.1.0",
   "scripts": {
     "build": "nest build",
+    "postinstall": "prisma generate",
     "start": "node dist/main",
     "start:dev": "nest start --watch",
+    "deploy:start": "npm run prisma:migrate:deploy && npm run start",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:seed": "prisma db seed"
   },
   "dependencies": {

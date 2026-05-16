@@ -147,3 +147,4 @@ http://localhost:3000
 - O roteiro do formulario de validacao esta em `docs/formulario-validacao-smartgreen.md`
 - O script de apoio para criar o Google Forms esta em `docs/google-forms-validacao-smartgreen.gs`
 - O passo a passo de deploy da landing na Vercel esta em `docs/deploy-vercel.md`
+- O passo a passo de deploy da API e banco no Railway esta em `docs/deploy-api-railway.md`

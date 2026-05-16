@@ -48,7 +48,8 @@ NEXT_PUBLIC_FORMULARIO_VALIDACAO_URL=https://docs.google.com/forms/d/e/1FAIpQLSf
 ```
 
 Enquanto a API publica nao existir, a landing abre normalmente, mas o login e o
-painel funcional nao vao funcionar para usuarios externos.
+painel funcional nao vao funcionar para usuarios externos. O passo a passo para
+publicar a API e o banco esta em `docs/deploy-api-railway.md`.
 
 ## 4. Deploy
 
@@ -67,4 +68,3 @@ Abra a URL final e teste:
 - O botao do MVP abre `/acesso`
 - Login/cadastro funcionam com a API publica configurada
 - O painel `/sistema` carrega os dados do backend hospedado
-
