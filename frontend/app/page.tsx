@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   ClipboardCheck,
   Gauge,
-  LockKeyhole,
   MapPinned,
   RefreshCcw,
   ShieldCheck,
@@ -24,7 +23,7 @@ const urlFormularioValidacao = obterUrlAmbiente(
   process.env.NEXT_PUBLIC_FORMULARIO_VALIDACAO_URL,
   urlFormularioValidacaoPadrao,
 );
-const urlMvp = obterUrlAmbiente(process.env.NEXT_PUBLIC_MVP_URL, "/acesso");
+const urlMvp = obterUrlAmbiente(process.env.NEXT_PUBLIC_MVP_URL, "/sistema");
 const urlDocumentacaoApi = obterUrlAmbiente(
   process.env.NEXT_PUBLIC_API_DOCS_URL,
   "http://localhost:4000/api/docs",
@@ -58,10 +57,10 @@ const funcionalidades = [
     Icone: RefreshCcw,
   },
   {
-    titulo: "Area autenticada",
+    titulo: "Acesso direto",
     descricao:
-      "Acesso com login e cadastro para que o usuario teste a solucao funcional.",
-    Icone: LockKeyhole,
+      "O usuario abre o painel principal pela landing e testa a solucao sem etapa de login.",
+    Icone: ArrowRight,
   },
 ] as const;
 
@@ -74,8 +73,8 @@ const itensEntrega = [
 
 const etapasTeste = [
   "Acesse o MVP pela landing page.",
-  "Entre com a conta de demonstracao ou crie um cadastro.",
-  "Observe a via com maior fluxo no painel.",
+  "Observe diretamente a via com maior fluxo no painel.",
+  "Use o botao de atualizacao para simular novas leituras.",
   "Responda ao formulario com sua avaliacao.",
 ] as const;
 
@@ -144,7 +143,7 @@ export default function LandingPage() {
           </div>
 
           <Link
-            href="/acesso"
+            href="/sistema"
             className="inline-flex items-center justify-center gap-2 rounded-md bg-[var(--smartgreen-green)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--smartgreen-green-soft)]"
           >
             Testar MVP
@@ -344,8 +343,8 @@ export default function LandingPage() {
             </h2>
             <p className="mt-5 text-base leading-8 text-slate-600">
               Nao ha APK nesta versao. O usuario final acessa a home funcional
-              pelo navegador, efetua login ou cadastro e testa o painel
-              autenticado de monitoramento de trafego.
+              pelo navegador e testa diretamente o painel principal de
+              monitoramento de trafego, sem precisar passar por login.
             </p>
 
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">

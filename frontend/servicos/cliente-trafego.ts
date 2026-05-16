@@ -6,13 +6,13 @@ class ClienteTrafegoHttp
   extends ClienteHttpSmartGreen
   implements ClienteTrafego
 {
-  async obterVisaoGeral(tokenAcesso: string): Promise<VisaoSistema> {
+  async obterVisaoGeral(tokenAcesso?: string): Promise<VisaoSistema> {
     return this.solicitar<VisaoSistema>("/controle-trafego/visao-geral", {
       tokenAcesso,
     });
   }
 
-  async simular(tokenAcesso: string): Promise<VisaoSistema> {
+  async simular(tokenAcesso?: string): Promise<VisaoSistema> {
     return this.solicitar<VisaoSistema>("/controle-trafego/simular", {
       metodo: "POST",
       tokenAcesso,

@@ -43,12 +43,12 @@ Configure em **Settings > Environment Variables** para Production e Preview:
 ```text
 NEXT_PUBLIC_API_URL=https://sua-api-publica.com/api
 NEXT_PUBLIC_API_DOCS_URL=https://sua-api-publica.com/api/docs
-NEXT_PUBLIC_MVP_URL=/acesso
+NEXT_PUBLIC_MVP_URL=/sistema
 NEXT_PUBLIC_FORMULARIO_VALIDACAO_URL=https://docs.google.com/forms/d/e/1FAIpQLSfsX2KAt-usKDsvfRZ2zAClX_Sa9IzO31eJCtXft-KeTLkujQ/viewform?usp=header
 ```
 
-Enquanto a API publica nao existir, a landing abre normalmente, mas o login e o
-painel funcional nao vao funcionar para usuarios externos. O passo a passo para
+Enquanto a API publica nao existir, a landing abre normalmente, mas o painel
+funcional nao vai carregar dados para usuarios externos. O passo a passo para
 publicar a API e o banco esta em `docs/deploy-api-railway.md`.
 
 ## 4. Deploy
@@ -65,6 +65,6 @@ Abra a URL final e teste:
 
 - A landing carrega em `/`
 - O botao de validacao abre o Google Forms
-- O botao do MVP abre `/acesso`
-- Login/cadastro funcionam com a API publica configurada
+- O botao do MVP abre `/sistema`
+- O painel carrega sem tela de login
 - O painel `/sistema` carrega os dados do backend hospedado

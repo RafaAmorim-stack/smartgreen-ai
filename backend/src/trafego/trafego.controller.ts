@@ -1,9 +1,7 @@
-import { Controller, Get, Post, UseGuards } from "@nestjs/common";
-import { GuardaJwt } from "../comum/guards/guarda-jwt";
+import { Controller, Get, Post } from "@nestjs/common";
 import { ServicoTrafego } from "./trafego.service";
 
 @Controller("controle-trafego")
-@UseGuards(GuardaJwt)
 export class ControladorTrafego {
   constructor(private readonly servicoTrafego: ServicoTrafego) {}
 

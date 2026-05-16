@@ -62,8 +62,8 @@ Principais arquivos:
 Rotas principais:
 
 - `/`: landing page publica do projeto
-- `/acesso`: login e cadastro para testar o MVP
-- `/sistema`: painel autenticado de monitoramento de trafego
+- `/sistema`: painel principal publico para testar o MVP
+- `/acesso`: login e cadastro mantidos como rota opcional
 
 Variaveis publicas relevantes:
 
@@ -79,7 +79,7 @@ Checklist para entrega publicada:
 - Configurar `NEXT_PUBLIC_API_URL` com a URL publica da API
 - Configurar `NEXT_PUBLIC_MVP_URL` com a URL publica da rota de acesso ao MVP
 - Criar/publicar o Google Forms e configurar `NEXT_PUBLIC_FORMULARIO_VALIDACAO_URL`
-- Testar o fluxo publico: landing -> MVP -> login/cadastro -> painel -> formulario
+- Testar o fluxo publico: landing -> painel do MVP -> formulario
 
 ## Banco de dados
 

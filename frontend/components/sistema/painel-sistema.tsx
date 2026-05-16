@@ -61,27 +61,20 @@ export function PainelSistema() {
   useEffect(() => {
     const tokenSalvo = armazenamentoSessao.obterToken();
 
-    if (!tokenSalvo) {
-      roteador.replace("/acesso");
-      return;
-    }
-
     setTokenAcesso(tokenSalvo);
     setUsuario(armazenamentoSessao.obterUsuario());
-  }, [roteador]);
+  }, []);
 
   useEffect(() => {
-    if (!tokenAcesso) {
-      return;
-    }
-
     const tokenAtual = tokenAcesso;
     let componenteAtivo = true;
 
     async function carregarVisaoInicial() {
       try {
         setErro(null);
-        const resposta = await servicoTrafego.obterVisaoGeral(tokenAtual);
+        const resposta = await servicoTrafego.obterVisaoGeral(
+          tokenAtual ?? undefined,
+        );
 
         if (componenteAtivo) {
           setVisaoSistema(resposta);
@@ -97,7 +90,11 @@ export function PainelSistema() {
             erroCarregamento.statusCode === 403)
         ) {
           armazenamentoSessao.limparSessao();
-          roteador.replace("/acesso");
+          setTokenAcesso(null);
+          setUsuario(null);
+          setErro(
+            "A API publica precisa estar atualizada para liberar o painel sem login.",
+          );
           return;
         }
 
@@ -169,14 +166,10 @@ export function PainelSistema() {
   }, [visaoSistema]);
 
   const simularAgora = useCallback(async () => {
-    if (!tokenAcesso) {
-      return;
-    }
-
     try {
       setAtualizando(true);
       setErro(null);
-      const resposta = await servicoTrafego.simular(tokenAcesso);
+      const resposta = await servicoTrafego.simular(tokenAcesso ?? undefined);
       setVisaoSistema(resposta);
       setSegundosRestantes(INTERVALO_ATUALIZACAO_AUTOMATICA);
     } catch (erroSimulacao) {
@@ -186,7 +179,11 @@ export function PainelSistema() {
           erroSimulacao.statusCode === 403)
       ) {
         armazenamentoSessao.limparSessao();
-        roteador.replace("/acesso");
+        setTokenAcesso(null);
+        setUsuario(null);
+        setErro(
+          "A API publica precisa estar atualizada para simular sem login.",
+        );
         return;
       }
 
@@ -201,10 +198,6 @@ export function PainelSistema() {
   }, [roteador, servicoTrafego, tokenAcesso]);
 
   useEffect(() => {
-    if (!tokenAcesso) {
-      return;
-    }
-
     const contador = window.setInterval(() => {
       setSegundosRestantes((valorAtual) =>
         valorAtual <= 1 ? INTERVALO_ATUALIZACAO_AUTOMATICA : valorAtual - 1,
@@ -219,7 +212,7 @@ export function PainelSistema() {
       window.clearInterval(contador);
       window.clearInterval(atualizacaoAutomatica);
     };
-  }, [tokenAcesso, simularAgora]);
+  }, [simularAgora]);
 
   function sair() {
     armazenamentoSessao.limparSessao();
@@ -332,13 +325,13 @@ export function PainelSistema() {
             <div className="flex w-full max-w-sm flex-col gap-3">
               <div className="rounded-[20px] border border-slate-200 bg-slate-50 px-4 py-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-                  Usuario conectado
+                  Acesso ao MVP
                 </p>
                 <p className="mt-2 text-base font-semibold text-slate-900">
-                  {usuario?.nome ?? "Gestor de transito"}
+                  {usuario?.nome ?? "Visitante da landing"}
                 </p>
                 <p className="mt-1 text-sm text-slate-600">
-                  {usuario?.email ?? "ambiente local"}
+                  {usuario?.email ?? "demonstracao publica"}
                 </p>
               </div>
 
@@ -361,7 +354,7 @@ export function PainelSistema() {
                   className="inline-flex items-center justify-center gap-2 rounded-[16px] border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
                   <LogOut className="h-4 w-4" />
-                  Sair
+                  Voltar
                 </button>
               </div>
             </div>

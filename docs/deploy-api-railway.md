@@ -82,7 +82,7 @@ Na Vercel, abra o projeto da landing e configure:
 ```text
 NEXT_PUBLIC_API_URL=https://smartgreen-api-production.up.railway.app/api
 NEXT_PUBLIC_API_DOCS_URL=https://smartgreen-api-production.up.railway.app/api/docs
-NEXT_PUBLIC_MVP_URL=/acesso
+NEXT_PUBLIC_MVP_URL=/sistema
 NEXT_PUBLIC_FORMULARIO_VALIDACAO_URL=https://docs.google.com/forms/d/e/1FAIpQLSfsX2KAt-usKDsvfRZ2zAClX_Sa9IzO31eJCtXft-KeTLkujQ/viewform?usp=header
 ```
 
@@ -92,9 +92,8 @@ Depois clique em **Redeploy** na Vercel.
 
 - Landing abre em `/`
 - Botao de formulario abre o Google Forms
-- Botao do MVP abre `/acesso`
-- Login com `professor@smartgreen.ai` funciona
+- Botao do MVP abre `/sistema`
+- Painel principal abre sem tela de login
 - Painel `/sistema` carrega vias e semaforo
 - Swagger abre em `/api/docs`
 - Saude da API abre em `/api/saude`
-
