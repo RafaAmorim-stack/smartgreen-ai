@@ -1,0 +1,43 @@
+erDiagram
+    USER {
+        string id PK
+        string name
+        string email UK
+        string passwordHash
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    LANE {
+        string id PK
+        string key UK
+        string name
+        string description
+        int displayOrder
+        int currentVehicleCount
+        string signalColor
+        datetime lastPriorityAt
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    TRAFFIC_FLOW_READING {
+        string id PK
+        string laneId FK
+        int vehicleCount
+        datetime recordedAt
+    }
+
+    TRAFFIC_LIGHT {
+        string id PK
+        string name
+        string mode
+        string statusText
+        int cycleSeconds
+        string currentPriorityLaneId FK
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    LANE ||--o{ TRAFFIC_FLOW_READING : registra
+    LANE ||--o{ TRAFFIC_LIGHT : pode_ser_prioritaria

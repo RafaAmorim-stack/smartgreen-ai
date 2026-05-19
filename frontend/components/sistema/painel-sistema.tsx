@@ -3,16 +3,23 @@
 import {
   AlertTriangle,
   LogOut,
-  MapPinned,
   RefreshCcw,
-  Radio,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { armazenamentoSessao } from "@/servicos/armazenamento-sessao";
-import { clienteApi, ErroApi } from "@/servicos/cliente-api";
-import type { UsuarioSessao, VisaoSistema } from "@/tipos/trafego";
+import {
+  clienteConsultaTrafego,
+  clienteSimulacaoTrafego,
+} from "@/servicos/cliente-trafego";
+import { ErroApi } from "@/servicos/cliente-http";
+import type {
+  ClienteConsultaTrafego,
+  ClienteSimulacaoTrafego,
+} from "@/servicos/interfaces/cliente-trafego";
+import type { UsuarioSessao, VisaoSistema, VisaoVia } from "@/tipos/trafego";
 import { ResumoSistema } from "./resumo-sistema";
+import { StatusSemaforos } from "./status-semaforos";
 import { VisaoCruzamento } from "./visao-cruzamento";
 
 const INTERVALO_ATUALIZACAO_AUTOMATICA = 5;
@@ -32,7 +39,24 @@ function calcularPassoSuave(valorAtual: number, valorDestino: number): number {
   return Math.sign(diferenca) * Math.min(3, Math.ceil(Math.abs(diferenca) / 4));
 }
 
+function encontrarViaMaiorFluxo(vias: VisaoVia[]): VisaoVia | null {
+  if (!vias.length) {
+    return null;
+  }
+
+  return [...vias].sort((viaA, viaB) => {
+    if (viaB.quantidadeVeiculos !== viaA.quantidadeVeiculos) {
+      return viaB.quantidadeVeiculos - viaA.quantidadeVeiculos;
+    }
+
+    return viaA.nome.localeCompare(viaB.nome);
+  })[0];
+}
+
 export function PainelSistema() {
+  const servicoConsultaTrafego: ClienteConsultaTrafego = clienteConsultaTrafego;
+  const servicoSimulacaoTrafego: ClienteSimulacaoTrafego =
+    clienteSimulacaoTrafego;
   const roteador = useRouter();
   const [tokenAcesso, setTokenAcesso] = useState<string | null>(null);
   const [usuario, setUsuario] = useState<UsuarioSessao | null>(null);
@@ -59,53 +83,41 @@ export function PainelSistema() {
     setUsuario(armazenamentoSessao.obterUsuario());
   }, [roteador]);
 
-  useEffect(() => {
+  const carregarVisao = useCallback(async () => {
     if (!tokenAcesso) {
       return;
     }
 
     const tokenAtual = tokenAcesso;
-    let componenteAtivo = true;
 
-    async function carregarVisaoInicial() {
-      try {
-        setErro(null);
-        const resposta = await clienteApi.obterVisaoGeral(tokenAtual);
-
-        if (componenteAtivo) {
-          setVisaoSistema(resposta);
-        }
-      } catch (erroCarregamento) {
-        if (componenteAtivo) {
-          if (
-            erroCarregamento instanceof ErroApi &&
-            (erroCarregamento.statusCode === 401 ||
-              erroCarregamento.statusCode === 403)
-          ) {
-            armazenamentoSessao.limparSessao();
-            roteador.replace("/");
-            return;
-          }
-
-          setErro(
-            erroCarregamento instanceof Error
-              ? erroCarregamento.message
-              : "Nao foi possivel carregar o sistema.",
-          );
-        }
-      } finally {
-        if (componenteAtivo) {
-          setCarregando(false);
-        }
+    try {
+      setErro(null);
+      const resposta = await servicoConsultaTrafego.obterVisaoGeral(tokenAtual);
+      setVisaoSistema(resposta);
+    } catch (erroCarregamento) {
+      if (
+        erroCarregamento instanceof ErroApi &&
+        (erroCarregamento.statusCode === 401 ||
+          erroCarregamento.statusCode === 403)
+      ) {
+        armazenamentoSessao.limparSessao();
+        roteador.replace("/");
+        return;
       }
+
+      setErro(
+        erroCarregamento instanceof Error
+          ? erroCarregamento.message
+          : "Nao foi possivel carregar o painel de monitoramento.",
+      );
+    } finally {
+      setCarregando(false);
     }
+  }, [roteador, servicoConsultaTrafego, tokenAcesso]);
 
-    void carregarVisaoInicial();
-
-    return () => {
-      componenteAtivo = false;
-    };
-  }, [tokenAcesso, roteador]);
+  useEffect(() => {
+    void carregarVisao();
+  }, [carregarVisao]);
 
   useEffect(() => {
     if (!visaoSistema) {
@@ -163,7 +175,7 @@ export function PainelSistema() {
     try {
       setAtualizando(true);
       setErro(null);
-      const resposta = await clienteApi.simular(tokenAcesso);
+      const resposta = await servicoSimulacaoTrafego.simular(tokenAcesso);
       setVisaoSistema(resposta);
       setSegundosRestantes(INTERVALO_ATUALIZACAO_AUTOMATICA);
     } catch (erroSimulacao) {
@@ -185,7 +197,7 @@ export function PainelSistema() {
     } finally {
       setAtualizando(false);
     }
-  }, [tokenAcesso, roteador]);
+  }, [roteador, servicoSimulacaoTrafego, tokenAcesso]);
 
   useEffect(() => {
     if (!tokenAcesso) {
@@ -209,35 +221,61 @@ export function PainelSistema() {
   }, [tokenAcesso, simularAgora]);
 
   function sair() {
+    const confirmouSaida = window.confirm("Deseja sair do SmartGreen?");
+
+    if (!confirmouSaida) {
+      return;
+    }
+
     armazenamentoSessao.limparSessao();
     roteador.push("/");
   }
 
-  const visaoSistemaAoVivo = visaoSistema
-    ? {
-        ...visaoSistema,
-        vias: visaoSistema.vias.map((via) => ({
-          ...via,
-          quantidadeVeiculos:
-            quantidadesAnimadas[via.id] ?? via.quantidadeVeiculos,
-        })),
-      }
-    : null;
+  const visaoSistemaAoVivo = useMemo(() => {
+    if (!visaoSistema) {
+      return null;
+    }
+
+    return {
+      ...visaoSistema,
+      vias: visaoSistema.vias.map((via) => ({
+        ...via,
+        quantidadeVeiculos:
+          quantidadesAnimadas[via.id] ?? via.quantidadeVeiculos,
+      })),
+    };
+  }, [visaoSistema, quantidadesAnimadas]);
+
+  const viaMaiorFluxo = useMemo(
+    () => encontrarViaMaiorFluxo(visaoSistemaAoVivo?.vias ?? []),
+    [visaoSistemaAoVivo],
+  );
+
+  const totalVeiculosMonitorados = useMemo(
+    () =>
+      (visaoSistemaAoVivo?.vias ?? []).reduce(
+        (acumulador, via) => acumulador + via.quantidadeVeiculos,
+        0,
+      ),
+    [visaoSistemaAoVivo],
+  );
 
   if (carregando && !visaoSistemaAoVivo) {
     return (
-      <main className="flex min-h-screen items-center justify-center px-6">
-        <div className="control-panel w-full max-w-2xl p-10 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.38em] text-slate-500">
-            Carregando
-          </p>
-          <h1 className="mt-4 font-display text-4xl font-semibold text-white">
-            Organizando a operacao do cruzamento
-          </h1>
-          <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-slate-300">
-            A leitura das vias esta sendo sincronizada com a API para montar o
-            menu principal, o tempo de verde e a simulacao central.
-          </p>
+      <main className="min-h-screen bg-slate-100 px-4 py-8">
+        <div className="mx-auto flex max-w-5xl items-center justify-center">
+          <div className="w-full rounded-[28px] border border-slate-200 bg-white p-10 text-center shadow-sm">
+            <p className="text-sm font-medium uppercase tracking-[0.28em] text-slate-500">
+              Carregando
+            </p>
+            <h1 className="mt-4 text-3xl font-semibold text-slate-900">
+              Preparando o painel de fluxo de veiculos
+            </h1>
+            <p className="mt-4 text-base leading-7 text-slate-600">
+              O sistema esta sincronizando as vias monitoradas para exibir as
+              quantidades em tempo real.
+            </p>
+          </div>
         </div>
       </main>
     );
@@ -245,82 +283,90 @@ export function PainelSistema() {
 
   if (!visaoSistemaAoVivo) {
     return (
-      <main className="flex min-h-screen items-center justify-center px-6">
-        <div className="control-panel w-full max-w-lg p-10 text-center">
-          <p className="text-sm text-red-200">
-            {erro ?? "Nao foi possivel carregar os dados principais do sistema."}
-          </p>
-          <button
-            type="button"
-            onClick={() => roteador.push("/")}
-            className="mt-6 rounded-[24px] bg-emerald-300 px-4 py-3 text-sm font-semibold text-slate-950"
-          >
-            Voltar para o acesso
-          </button>
+      <main className="min-h-screen bg-slate-100 px-4 py-8">
+        <div className="mx-auto flex max-w-3xl items-center justify-center">
+          <div className="w-full rounded-[28px] border border-rose-200 bg-white p-10 text-center shadow-sm">
+            <p className="text-base text-rose-600">
+              {erro ?? "Nao foi possivel carregar os dados principais do sistema."}
+            </p>
+            <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => void carregarVisao()}
+                className="rounded-[16px] bg-[var(--smartgreen-green)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--smartgreen-green-soft)] focus:outline-none focus:ring-2 focus:ring-[var(--smartgreen-green)] focus:ring-offset-2"
+              >
+                Tentar novamente
+              </button>
+              <button
+                type="button"
+                onClick={() => roteador.push("/")}
+                className="rounded-[16px] border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--smartgreen-green)] focus:ring-offset-2"
+              >
+                Voltar para o acesso
+              </button>
+            </div>
+          </div>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden px-4 py-4 sm:px-6 sm:py-6">
-      <div className="absolute inset-0 city-grid opacity-[0.06]" />
-      <div className="absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.08),transparent_55%)]" />
-
-      <div className="relative mx-auto max-w-[1480px] space-y-7">
-        <header className="control-panel overflow-hidden px-5 py-6 sm:px-7 sm:py-7">
-          <div className="grid gap-6 xl:grid-cols-[1fr_auto] xl:items-start">
-            <div>
-              <div className="flex flex-wrap gap-3">
-                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.28em] text-emerald-100">
-                  <Radio className="h-3.5 w-3.5 animate-pulse" />
-                  Leitura ao vivo
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-sky-300/20 bg-sky-300/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.28em] text-sky-100">
-                  <MapPinned className="h-3.5 w-3.5" />
-                  {visaoSistemaAoVivo.enderecoCruzamento}
-                </span>
+    <main className="min-h-screen bg-slate-100 px-4 py-6 sm:px-6 sm:py-8">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <header className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-4">
+              <div>
+                <h1 className="text-3xl font-semibold text-slate-900 sm:text-4xl">
+                  Menu SmartGreen
+                </h1>
+                <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">
+                  Acompanhe primeiro o status atual dos semaforos e, em seguida,
+                  monitore o fluxo de veiculos nas vias do cruzamento.
+                </p>
               </div>
 
-              <h1 className="mt-5 font-display text-4xl font-semibold text-white">
-                Central SmartGreen AI
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">
-                Interface enxuta para acompanhar prioridade, ciclo e estado das
-                vias sem excesso de informacao visual.
-              </p>
+              <div className="flex flex-wrap gap-3 text-sm text-slate-600">
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2">
+                  {visaoSistemaAoVivo.enderecoCruzamento}
+                </span>
+                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-emerald-700">
+                  Atualizacao automatica a cada {INTERVALO_ATUALIZACAO_AUTOMATICA}s
+                </span>
+              </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-[minmax(220px,1fr)_auto] sm:items-start">
-              <div className="panel-surface px-5 py-5 text-sm text-slate-300">
-                <p className="text-[11px] uppercase tracking-[0.34em] text-slate-500">
+            <div className="flex w-full max-w-sm flex-col gap-3">
+              <div className="rounded-[20px] border border-slate-200 bg-slate-50 px-4 py-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
                   Usuario conectado
                 </p>
-                <p className="mt-3 font-semibold text-white">
-                  {usuario?.nome ?? "Acesso academico"}
+                <p className="mt-2 text-base font-semibold text-slate-900">
+                  {usuario?.nome ?? "Gestor de transito"}
                 </p>
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="mt-1 text-sm text-slate-600">
                   {usuario?.email ?? "ambiente local"}
                 </p>
               </div>
 
-              <div className="flex flex-col gap-3">
+              <div className="grid gap-3">
                 <button
                   type="button"
                   onClick={() => void simularAgora()}
                   disabled={atualizando}
-                  className="inline-flex items-center justify-center gap-2 rounded-[24px] bg-gradient-to-r from-emerald-300 via-lime-300 to-emerald-200 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-75"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-[16px] bg-[var(--smartgreen-green)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--smartgreen-green-soft)] focus:outline-none focus:ring-2 focus:ring-[var(--smartgreen-green)] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   <RefreshCcw
                     className={`h-4 w-4 ${atualizando ? "animate-spin" : ""}`}
                   />
-                  {atualizando ? "Atualizando..." : "Atualizar dados"}
+                  {atualizando ? "Atualizando" : "Atualizar"}
                 </button>
 
                 <button
                   type="button"
                   onClick={sair}
-                  className="inline-flex items-center justify-center gap-2 rounded-[24px] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-medium text-slate-100 transition hover:bg-white/10"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-[16px] border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--smartgreen-green)] focus:ring-offset-2"
                 >
                   <LogOut className="h-4 w-4" />
                   Sair
@@ -331,14 +377,33 @@ export function PainelSistema() {
         </header>
 
         {erro ? (
-          <div className="flex items-start gap-3 rounded-[24px] border border-amber-400/25 bg-amber-500/10 px-4 py-4 text-sm text-amber-100">
-            <AlertTriangle className="mt-0.5 h-4 w-4 flex-none" />
-            <span>{erro}</span>
+          <div
+            role="alert"
+            className="flex flex-col gap-3 rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-4 w-4 flex-none" />
+              <span>{erro}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => void carregarVisao()}
+              className="inline-flex min-h-10 items-center justify-center rounded-[14px] border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-800 transition hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+            >
+              Tentar novamente
+            </button>
           </div>
         ) : null}
 
+        <StatusSemaforos
+          vias={visaoSistemaAoVivo.vias}
+          semaforo={visaoSistemaAoVivo.semaforo}
+        />
+
         <ResumoSistema
           visaoSistema={visaoSistemaAoVivo}
+          viaMaiorFluxo={viaMaiorFluxo}
+          totalVeiculosMonitorados={totalVeiculosMonitorados}
           segundosRestantes={segundosRestantes}
           atualizando={atualizando}
         />
@@ -346,7 +411,7 @@ export function PainelSistema() {
         <VisaoCruzamento
           vias={visaoSistemaAoVivo.vias}
           semaforo={visaoSistemaAoVivo.semaforo}
-          enderecoCruzamento={visaoSistemaAoVivo.enderecoCruzamento}
+          viaMaiorFluxoId={viaMaiorFluxo?.id ?? null}
         />
       </div>
     </main>

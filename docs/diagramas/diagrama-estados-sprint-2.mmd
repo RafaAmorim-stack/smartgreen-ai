@@ -1,0 +1,46 @@
+stateDiagram-v2
+    direction LR
+
+    [*] --> Acesso
+
+    state Acesso {
+        direction TB
+        [*] --> TelaLogin
+        TelaLogin --> ValidandoLogin : Entrar
+        TelaLogin --> ModoCadastro : Cadastrar
+
+        ValidandoLogin --> AcessoAutorizado : credenciais validas
+        ValidandoLogin --> ErroLogin : credenciais invalidas
+        ErroLogin --> TelaLogin : corrigir dados
+
+        ModoCadastro --> ValidandoCadastro : enviar cadastro
+        ValidandoCadastro --> CadastroConcluido : dados validos
+        ValidandoCadastro --> ErroCadastro : dados invalidos
+        ErroCadastro --> ModoCadastro : corrigir dados
+        CadastroConcluido --> TelaLogin : entrar
+    }
+
+    AcessoAutorizado --> MenuSmartGreen
+
+    state MenuSmartGreen {
+        direction TB
+        [*] --> CarregandoVisao
+        CarregandoVisao --> StatusSemaforos : dados carregados
+        StatusSemaforos --> FluxoVeiculos : RF3 exibido
+        FluxoVeiculos --> AguardandoAtualizacao : RF1 exibido
+
+        AguardandoAtualizacao --> SimulandoTrafego : Atualizar
+        AguardandoAtualizacao --> SimulandoTrafego : atualizacao automatica
+        SimulandoTrafego --> StatusSemaforos : nova leitura
+
+        AguardandoAtualizacao --> ConfirmandoSaida : Sair
+        ConfirmandoSaida --> AguardandoAtualizacao : cancelar
+    }
+
+    MenuSmartGreen --> ErroPainel : falha de API
+    SimulandoTrafego --> ErroPainel : erro na simulacao
+    ErroPainel --> MenuSmartGreen : tentar novamente
+    ErroPainel --> Acesso : sessao expirada
+    ConfirmandoSaida --> Acesso : confirmar saida
+
+    Acesso --> [*]

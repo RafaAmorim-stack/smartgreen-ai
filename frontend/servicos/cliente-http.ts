@@ -1,8 +1,3 @@
-import type {
-  RespostaAutenticacao,
-  VisaoSistema,
-} from "@/tipos/trafego";
-
 interface OpcoesDeSolicitacao {
   metodo?: "GET" | "POST";
   tokenAcesso?: string;
@@ -19,45 +14,11 @@ export class ErroApi extends Error {
   }
 }
 
-class ClienteApiSmartGreen {
-  private readonly urlBase =
+export abstract class ClienteHttpSmartGreen {
+  protected readonly urlBase =
     process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
 
-  async entrar(dadosEntrada: {
-    email: string;
-    senha: string;
-  }): Promise<RespostaAutenticacao> {
-    return this.solicitar<RespostaAutenticacao>("/autenticacao/entrar", {
-      metodo: "POST",
-      corpo: dadosEntrada,
-    });
-  }
-
-  async cadastrar(dadosCadastro: {
-    nomeCompleto: string;
-    email: string;
-    senha: string;
-  }): Promise<RespostaAutenticacao> {
-    return this.solicitar<RespostaAutenticacao>("/autenticacao/cadastrar", {
-      metodo: "POST",
-      corpo: dadosCadastro,
-    });
-  }
-
-  async obterVisaoGeral(tokenAcesso: string): Promise<VisaoSistema> {
-    return this.solicitar<VisaoSistema>("/controle-trafego/visao-geral", {
-      tokenAcesso,
-    });
-  }
-
-  async simular(tokenAcesso: string): Promise<VisaoSistema> {
-    return this.solicitar<VisaoSistema>("/controle-trafego/simular", {
-      metodo: "POST",
-      tokenAcesso,
-    });
-  }
-
-  private async solicitar<T>(
+  protected async solicitar<T>(
     caminho: string,
     {
       metodo = "GET",
@@ -95,5 +56,3 @@ class ClienteApiSmartGreen {
     return (await resposta.json()) as T;
   }
 }
-
-export const clienteApi = new ClienteApiSmartGreen();

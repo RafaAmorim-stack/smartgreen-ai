@@ -1,5 +1,5 @@
-import { hash } from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
+import { hash } from "bcryptjs";
 import {
   ChaveVia,
   CorSemaforo,
@@ -9,87 +9,108 @@ import {
 const prisma = new PrismaClient();
 
 async function main() {
-  await prisma.trafficFlowReading.deleteMany();
-  await prisma.trafficLight.deleteMany();
-  await prisma.lane.deleteMany();
-  await prisma.user.deleteMany();
-
   const senhaCriptografada = await hash("smartgreen123", 10);
 
-  await prisma.user.create({
-    data: {
+  await prisma.user.upsert({
+    where: { email: "professor@smartgreen.ai" },
+    update: {
+      name: "Equipe SmartGreen",
+      passwordHash: senhaCriptografada,
+    },
+    create: {
       name: "Equipe SmartGreen",
       email: "professor@smartgreen.ai",
       passwordHash: senhaCriptografada,
     },
   });
 
+  const instanteAtual = new Date();
   const definicoesDeVia = [
     {
       key: ChaveVia.NORTE,
       name: "Via Norte",
       description: "Fluxo descendente em direcao ao eixo central",
       displayOrder: 1,
-      currentVehicleCount: 24,
+      currentVehicleCount: 14,
       signalColor: CorSemaforo.VERDE,
+      lastPriorityAt: new Date(instanteAtual.getTime() - 20_000),
     },
     {
       key: ChaveVia.LESTE,
       name: "Via Leste",
       description: "Corredor leste-oeste com faixa unica de deslocamento",
       displayOrder: 2,
-      currentVehicleCount: 21,
+      currentVehicleCount: 12,
       signalColor: CorSemaforo.VERMELHO,
+      lastPriorityAt: null,
     },
     {
       key: ChaveVia.SUL,
       name: "Via Sul",
       description: "Fluxo ascendente com maior demanda inicial",
       displayOrder: 3,
-      currentVehicleCount: 27,
+      currentVehicleCount: 16,
       signalColor: CorSemaforo.VERDE,
+      lastPriorityAt: new Date(instanteAtual.getTime() - 20_000),
     },
   ] as const;
 
-  const instanteAtual = new Date();
-  const viasCriadas = [];
+  const viasMonitoradas = [];
 
   for (const definicaoDeVia of definicoesDeVia) {
-    const viaCriada = await prisma.lane.create({
-      data: {
-        ...definicaoDeVia,
-        lastPriorityAt:
-          definicaoDeVia.key === ChaveVia.NORTE ||
-          definicaoDeVia.key === ChaveVia.SUL
-            ? new Date(instanteAtual.getTime() - 20_000)
-            : null,
+    const via = await prisma.lane.upsert({
+      where: { key: definicaoDeVia.key },
+      update: {
+        name: definicaoDeVia.name,
+        description: definicaoDeVia.description,
+        displayOrder: definicaoDeVia.displayOrder,
+        currentVehicleCount: definicaoDeVia.currentVehicleCount,
+        signalColor: definicaoDeVia.signalColor,
+        lastPriorityAt: definicaoDeVia.lastPriorityAt,
       },
+      create: definicaoDeVia,
     });
 
-    viasCriadas.push(viaCriada);
+    viasMonitoradas.push(via);
   }
 
   await prisma.trafficFlowReading.createMany({
-    data: viasCriadas.map((viaCriada) => ({
-      laneId: viaCriada.id,
-      vehicleCount: viaCriada.currentVehicleCount,
+    data: viasMonitoradas.map((via) => ({
+      laneId: via.id,
+      vehicleCount: via.currentVehicleCount,
       recordedAt: instanteAtual,
     })),
   });
 
-  const viaPrioritaria = viasCriadas.find(
-    (viaCriada) => viaCriada.key === ChaveVia.SUL,
-  );
-
-  await prisma.trafficLight.create({
-    data: {
-      name: "Semaforo Central",
-      mode: ModoSemaforo.AUTOMATICO,
-      statusText: `${viaPrioritaria?.name ?? "Via Sul"} liberada com verde inteligente por 20s.`,
-      cycleSeconds: 36,
-      currentPriorityLaneId: viaPrioritaria?.id,
-    },
+  const viaPrioritaria =
+    viasMonitoradas.find((via) => via.key === ChaveVia.SUL) ??
+    viasMonitoradas[0];
+  const textoStatus = `${viaPrioritaria.name} liberada com verde inteligente por 20s.`;
+  const semaforoExistente = await prisma.trafficLight.findFirst({
+    where: { name: "Semaforo Central" },
   });
+
+  if (semaforoExistente) {
+    await prisma.trafficLight.update({
+      where: { id: semaforoExistente.id },
+      data: {
+        mode: ModoSemaforo.AUTOMATICO,
+        statusText: textoStatus,
+        cycleSeconds: 36,
+        currentPriorityLaneId: viaPrioritaria.id,
+      },
+    });
+  } else {
+    await prisma.trafficLight.create({
+      data: {
+        name: "Semaforo Central",
+        mode: ModoSemaforo.AUTOMATICO,
+        statusText: textoStatus,
+        cycleSeconds: 36,
+        currentPriorityLaneId: viaPrioritaria.id,
+      },
+    });
+  }
 
   console.log("Seed concluido com usuario, vias e semaforo inicial.");
 }

@@ -1,15 +1,22 @@
 "use client";
 import {
+  AlertCircle,
+  CheckCircle2,
+  Eye,
+  EyeOff,
   LockKeyhole,
   LogIn,
   Mail,
   UserRound,
   UserRoundPlus,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { armazenamentoSessao } from "@/servicos/armazenamento-sessao";
-import { clienteApi } from "@/servicos/cliente-api";
-import type { UsuarioSessao } from "@/tipos/trafego";
+import {
+  clienteCadastroAutenticacao,
+  clienteEntradaAutenticacao,
+} from "@/servicos/cliente-autenticacao";
 
 type ModoAcesso = "entrar" | "cadastrar";
 
@@ -25,42 +32,62 @@ const conteudoModo = {
 } as const;
 
 export function FormularioAcesso() {
+  const roteador = useRouter();
   const [modoAcesso, setModoAcesso] = useState<ModoAcesso>("entrar");
   const [nomeCompleto, setNomeCompleto] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
-  const [usuarioAutenticado, setUsuarioAutenticado] =
-    useState<UsuarioSessao | null>(null);
+  const [mensagemSucesso, setMensagemSucesso] = useState("");
+  const [exibirSenha, setExibirSenha] = useState(false);
 
   useEffect(() => {
     const token = armazenamentoSessao.obterToken();
     const usuarioSalvo = armazenamentoSessao.obterUsuario();
 
     if (token && usuarioSalvo) {
-      setUsuarioAutenticado(usuarioSalvo);
+      roteador.replace("/sistema");
     }
-  }, []);
+  }, [roteador]);
 
   const painelAtual = useMemo(() => conteudoModo[modoAcesso], [modoAcesso]);
+  const emailNormalizado = email.trim();
+  const formularioValido = useMemo(() => {
+    const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNormalizado);
+    const senhaValida = senha.length >= 6;
+    const nomeValido =
+      modoAcesso === "entrar" || nomeCompleto.trim().length >= 3;
+
+    return emailValido && senhaValida && nomeValido;
+  }, [emailNormalizado, modoAcesso, nomeCompleto, senha]);
 
   async function enviarFormulario(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     setErro("");
+    setMensagemSucesso("");
+
+    if (!formularioValido) {
+      setErro("Revise os campos destacados antes de continuar.");
+      return;
+    }
+
     setCarregando(true);
 
     try {
       if (modoAcesso === "entrar") {
-        const resposta = await clienteApi.entrar({ email, senha });
+        const resposta = await clienteEntradaAutenticacao.entrar({
+          email: emailNormalizado,
+          senha,
+        });
         armazenamentoSessao.salvarSessao(resposta);
-        setUsuarioAutenticado(resposta.usuario);
+        roteador.replace("/sistema");
         return;
       }
 
-      await clienteApi.cadastrar({
+      await clienteCadastroAutenticacao.cadastrar({
         nomeCompleto,
-        email,
+        email: emailNormalizado,
         senha,
       });
 
@@ -68,6 +95,7 @@ export function FormularioAcesso() {
       setNomeCompleto("");
       setEmail("");
       setSenha("");
+      setMensagemSucesso("Cadastro criado. Entre com seu e-mail e senha.");
     } catch (erroEnvio) {
       setErro(
         erroEnvio instanceof Error
@@ -85,54 +113,20 @@ export function FormularioAcesso() {
     setEmail("");
     setSenha("");
     setErro("");
+    setMensagemSucesso("");
   }
 
   function mostrarMensagemRecuperacao() {
     setErro("Recuperacao de senha sera disponibilizada na proxima sprint.");
   }
 
-  function encerrarSessao() {
-    armazenamentoSessao.limparSessao();
-    setUsuarioAutenticado(null);
+  function limparFormulario() {
     setModoAcesso("entrar");
     setNomeCompleto("");
     setEmail("");
     setSenha("");
     setErro("");
-  }
-
-  if (usuarioAutenticado) {
-    return (
-      <div className="w-full max-w-[540px] rounded-[28px] border border-[var(--smartgreen-line)] bg-white p-6 shadow-[0_10px_32px_rgba(16,24,35,0.04)] sm:p-8">
-        <div className="space-y-8">
-          <div className="flex items-center justify-between">
-            <div className="h-1 w-16 bg-[var(--smartgreen-green)]" />
-
-            <button
-              type="button"
-              onClick={encerrarSessao}
-              className="border border-[var(--smartgreen-green)] px-4 py-2 text-sm font-medium text-[var(--smartgreen-green)]"
-            >
-              Encerrar sessao
-            </button>
-          </div>
-
-          <div className="space-y-6">
-            <div className="border-b border-[var(--smartgreen-line)] pb-4">
-              <p className="text-lg font-semibold text-slate-900">
-                {usuarioAutenticado.nome}
-              </p>
-            </div>
-
-            <div className="border-b border-[var(--smartgreen-line)] pb-4">
-              <p className="text-base text-slate-700">
-                {usuarioAutenticado.email}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    setMensagemSucesso("");
   }
 
   return (
@@ -175,7 +169,11 @@ export function FormularioAcesso() {
           </button>
         </div>
 
-        <form className="space-y-4" onSubmit={enviarFormulario}>
+        <form
+          className="space-y-4"
+          onSubmit={enviarFormulario}
+          aria-busy={carregando}
+        >
           {modoAcesso === "cadastrar" ? (
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-slate-700">
@@ -190,6 +188,7 @@ export function FormularioAcesso() {
                   placeholder="Digite seu nome completo"
                   className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
                   autoComplete="name"
+                  minLength={3}
                   required
                 />
               </div>
@@ -209,6 +208,7 @@ export function FormularioAcesso() {
                 placeholder="Digite seu e-mail"
                 className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
                 autoComplete="email"
+                aria-invalid={Boolean(email) && !emailNormalizado.includes("@")}
                 required
               />
             </div>
@@ -221,7 +221,7 @@ export function FormularioAcesso() {
             <div className="flex items-center gap-2 rounded-[14px] border border-[var(--smartgreen-line)] px-4 py-3">
               <LockKeyhole className="h-4 w-4 text-[var(--smartgreen-green)]" />
               <input
-                type="password"
+                type={exibirSenha ? "text" : "password"}
                 value={senha}
                 onChange={(evento) => setSenha(evento.target.value)}
                 placeholder="Digite sua senha"
@@ -229,21 +229,53 @@ export function FormularioAcesso() {
                 autoComplete={
                   modoAcesso === "entrar" ? "current-password" : "new-password"
                 }
+                minLength={6}
+                aria-describedby="senha-ajuda"
                 required
               />
+              <button
+                type="button"
+                onClick={() => setExibirSenha((valorAtual) => !valorAtual)}
+                className="rounded-full p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--smartgreen-green)]"
+                aria-label={exibirSenha ? "Ocultar senha" : "Mostrar senha"}
+              >
+                {exibirSenha ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
             </div>
+            <p id="senha-ajuda" className="mt-2 text-xs text-slate-500">
+              Use no minimo 6 caracteres.
+            </p>
           </label>
 
+          {mensagemSucesso ? (
+            <div
+              role="status"
+              aria-live="polite"
+              className="flex items-start gap-2 rounded-[14px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+            >
+              <CheckCircle2 className="mt-0.5 h-4 w-4 flex-none" />
+              <span>{mensagemSucesso}</span>
+            </div>
+          ) : null}
+
           {erro ? (
-            <div className="border-l-2 border-[var(--smartgreen-green)] pl-4 text-sm text-[var(--smartgreen-green)]">
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-[14px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 flex-none" />
               <span>{erro}</span>
             </div>
           ) : null}
 
           <button
             type="submit"
-            disabled={carregando}
-            className="flex w-full items-center justify-center rounded-[14px] bg-[var(--smartgreen-green)] px-4 py-3.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
+            disabled={carregando || !formularioValido}
+            className="flex min-h-12 w-full items-center justify-center rounded-[14px] bg-[var(--smartgreen-green)] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[var(--smartgreen-green-soft)] focus:outline-none focus:ring-2 focus:ring-[var(--smartgreen-green)] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {carregando ? painelAtual.carregando : painelAtual.acao}
           </button>
@@ -253,12 +285,22 @@ export function FormularioAcesso() {
               <button
                 type="button"
                 onClick={mostrarMensagemRecuperacao}
-                className="text-xs text-[var(--smartgreen-green)] underline underline-offset-4"
+                className="rounded px-1 py-1 text-xs text-[var(--smartgreen-green)] underline underline-offset-4 focus:outline-none focus:ring-2 focus:ring-[var(--smartgreen-green)]"
               >
                 Esqueceu a senha?
               </button>
             </div>
-          ) : null}
+          ) : (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={limparFormulario}
+                className="rounded px-1 py-1 text-xs text-slate-500 underline underline-offset-4 focus:outline-none focus:ring-2 focus:ring-[var(--smartgreen-green)]"
+              >
+                Limpar campos
+              </button>
+            </div>
+          )}
         </form>
       </div>
     </div>

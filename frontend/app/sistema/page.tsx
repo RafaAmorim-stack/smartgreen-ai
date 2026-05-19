@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { PainelSistema } from "@/components/sistema/painel-sistema";
 
 export default function PaginaSistema() {
-  redirect("/");
+  return <PainelSistema />;
 }

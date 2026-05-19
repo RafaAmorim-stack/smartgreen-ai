@@ -30,3 +30,8 @@ select {
   background: var(--smartgreen-green);
   color: #ffffff;
 }
+
+:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--smartgreen-green) 68%, white);
+  outline-offset: 3px;
+}
