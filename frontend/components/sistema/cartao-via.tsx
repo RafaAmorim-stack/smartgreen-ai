@@ -1,6 +1,8 @@
 import { CircleDot, TrendingUp } from "lucide-react";
 import { diretorioDeVias, type VisaoVia } from "@/tipos/trafego";
 
+const LIMITE_VISUAL_VEICULOS = 20;
+
 const mapaSemaforo = {
   GREEN: {
     rotulo: "Semaforo verde",
@@ -16,6 +18,13 @@ const mapaSemaforo = {
   },
 } as const;
 
+function calcularPercentualOcupacao(quantidadeVeiculos: number): number {
+  return Math.min(
+    100,
+    Math.round((quantidadeVeiculos / LIMITE_VISUAL_VEICULOS) * 100),
+  );
+}
+
 interface PropriedadesCartaoVia {
   via: VisaoVia;
   possuiMaiorFluxo: boolean;
@@ -26,6 +35,7 @@ export function CartaoVia({
   possuiMaiorFluxo,
 }: PropriedadesCartaoVia) {
   const semaforo = mapaSemaforo[via.corSemaforo];
+  const percentualOcupacao = calcularPercentualOcupacao(via.quantidadeVeiculos);
 
   return (
     <article
@@ -65,9 +75,28 @@ export function CartaoVia({
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
           Quantidade de veiculos
         </p>
-        <p className="mt-3 text-5xl font-bold tracking-tight text-slate-900">
-          {via.quantidadeVeiculos}
-        </p>
+        <div className="mt-3 flex items-end justify-between gap-4">
+          <p className="text-5xl font-bold tracking-tight text-slate-900">
+            {via.quantidadeVeiculos}
+          </p>
+          <p className="pb-1 text-sm font-semibold text-slate-500">
+            max. {LIMITE_VISUAL_VEICULOS}
+          </p>
+        </div>
+
+        <div
+          className="mt-5 h-3 overflow-hidden rounded-full bg-slate-100"
+          role="meter"
+          aria-label={`Ocupacao da ${via.nome}`}
+          aria-valuemin={0}
+          aria-valuemax={LIMITE_VISUAL_VEICULOS}
+          aria-valuenow={via.quantidadeVeiculos}
+        >
+          <div
+            className="h-full rounded-full bg-[var(--smartgreen-green)] transition-all duration-500"
+            style={{ width: `${percentualOcupacao}%` }}
+          />
+        </div>
       </div>
 
       <div className="mt-6 flex items-center gap-3">

@@ -1,0 +1,207 @@
+classDiagram
+direction LR
+
+class PaginaLogin {
+  +render()
+}
+
+class FormularioAcesso {
+  -modoAcesso: ModoAcesso
+  -nomeCompleto: string
+  -email: string
+  -senha: string
+  -carregando: boolean
+  -erro: string
+  +enviarFormulario()
+  +alterarModo()
+  +limparFormulario()
+}
+
+class ArmazenamentoSessao {
+  -chaveToken: string
+  -chaveUsuario: string
+  +salvarSessao()
+  +obterToken()
+  +obterUsuario()
+  +limparSessao()
+}
+
+class ClienteEntradaAutenticacao {
+  <<interface>>
+  +entrar(dadosEntrada)
+}
+
+class ClienteCadastroAutenticacao {
+  <<interface>>
+  +cadastrar(dadosCadastro)
+}
+
+class ClienteAutenticacaoHttp {
+  +entrar(dadosEntrada)
+  +cadastrar(dadosCadastro)
+}
+
+class PaginaSistema {
+  +render()
+}
+
+class PainelSistema {
+  -tokenAcesso: string
+  -usuario: UsuarioSessao
+  -visaoSistema: VisaoSistema
+  -carregando: boolean
+  -atualizando: boolean
+  +carregarVisao()
+  +simularAgora()
+  +sair()
+}
+
+class StatusSemaforos {
+  +render(vias, semaforo)
+}
+
+class ResumoSistema {
+  +render(visaoSistema)
+}
+
+class VisaoCruzamento {
+  +render(vias, semaforo)
+}
+
+class CartaoVia {
+  +render(via)
+}
+
+class ClienteConsultaTrafego {
+  <<interface>>
+  +obterVisaoGeral(tokenAcesso)
+}
+
+class ClienteSimulacaoTrafego {
+  <<interface>>
+  +simular(tokenAcesso)
+}
+
+class ClienteTrafegoHttp {
+  +obterVisaoGeral(tokenAcesso)
+  +simular(tokenAcesso)
+}
+
+class ControladorAutenticacao {
+  +cadastrar(dadosCadastro)
+  +entrar(dadosEntrada)
+}
+
+class ServicoAutenticacao {
+  -prisma: PrismaService
+  -servicoJwt: JwtService
+  +cadastrar(dadosCadastro)
+  +entrar(dadosEntrada)
+  -criarSessao(usuario)
+}
+
+class ControladorTrafego {
+  +obterVisaoGeral()
+  +simular()
+}
+
+class ServicoTrafego {
+  -prisma: PrismaService
+  -engenharia: EngenhariaDeTrafego
+  +obterVisaoGeral()
+  +simular()
+  -buscarViasMonitoradas()
+  -buscarSemaforo()
+}
+
+class EngenhariaDeTrafego {
+  -estrategiaViaAberta: EstrategiaViaAberta
+  -estrategiaViaFechada: EstrategiaViaFechada
+  +processarCenarioAtual()
+  +processarSimulacao()
+  +obterIdsAbertosAtuais()
+  +calcularTempoVerdeSegundos()
+}
+
+class EstrategiaSimulacaoVia {
+  <<interface>>
+  +simular(contexto)
+}
+
+class EstrategiaViaAberta {
+  +simular(contexto)
+}
+
+class EstrategiaViaFechada {
+  +simular(contexto)
+}
+
+class PrismaService {
+  +onModuleInit()
+  +enableShutdownHooks()
+}
+
+class User {
+  +id: string
+  +name: string
+  +email: string
+  +passwordHash: string
+}
+
+class Lane {
+  +id: string
+  +key: LaneKey
+  +name: string
+  +currentVehicleCount: number
+  +signalColor: SignalColor
+}
+
+class TrafficLight {
+  +id: string
+  +name: string
+  +statusText: string
+  +cycleSeconds: number
+}
+
+class TrafficFlowReading {
+  +id: string
+  +laneId: string
+  +vehicleCount: number
+  +recordedAt: DateTime
+}
+
+PaginaLogin --> FormularioAcesso
+FormularioAcesso --> ClienteEntradaAutenticacao
+FormularioAcesso --> ClienteCadastroAutenticacao
+FormularioAcesso --> ArmazenamentoSessao
+ClienteAutenticacaoHttp ..|> ClienteEntradaAutenticacao
+ClienteAutenticacaoHttp ..|> ClienteCadastroAutenticacao
+ClienteAutenticacaoHttp ..> ControladorAutenticacao : HTTP
+
+PaginaSistema --> PainelSistema
+PainelSistema --> StatusSemaforos
+PainelSistema --> ResumoSistema
+PainelSistema --> VisaoCruzamento
+PainelSistema --> ClienteConsultaTrafego
+PainelSistema --> ClienteSimulacaoTrafego
+PainelSistema --> ArmazenamentoSessao
+VisaoCruzamento --> CartaoVia
+ClienteTrafegoHttp ..|> ClienteConsultaTrafego
+ClienteTrafegoHttp ..|> ClienteSimulacaoTrafego
+ClienteTrafegoHttp ..> ControladorTrafego : HTTP
+
+ControladorAutenticacao --> ServicoAutenticacao
+ControladorTrafego --> ServicoTrafego
+ServicoAutenticacao --> PrismaService
+ServicoTrafego --> PrismaService
+ServicoTrafego --> EngenhariaDeTrafego
+EngenhariaDeTrafego --> EstrategiaSimulacaoVia
+EstrategiaViaAberta ..|> EstrategiaSimulacaoVia
+EstrategiaViaFechada ..|> EstrategiaSimulacaoVia
+
+PrismaService --> User
+PrismaService --> Lane
+PrismaService --> TrafficLight
+PrismaService --> TrafficFlowReading
+Lane "1" --> "0..*" TrafficFlowReading
+Lane "0..1" --> "0..*" TrafficLight

@@ -2,13 +2,15 @@ import type { RespostaAutenticacao } from "@/tipos/trafego";
 import { ClienteHttpSmartGreen } from "./cliente-http";
 import type {
   ClienteAutenticacao,
+  ClienteCadastroAutenticacao,
+  ClienteEntradaAutenticacao,
   DadosCadastroAutenticacao,
   DadosEntradaAutenticacao,
 } from "./interfaces/cliente-autenticacao";
 
 class ClienteAutenticacaoHttp
   extends ClienteHttpSmartGreen
-  implements ClienteAutenticacao
+  implements ClienteEntradaAutenticacao, ClienteCadastroAutenticacao
 {
   async entrar(
     dadosEntrada: DadosEntradaAutenticacao,
@@ -29,5 +31,12 @@ class ClienteAutenticacaoHttp
   }
 }
 
-export const clienteAutenticacao: ClienteAutenticacao =
-  new ClienteAutenticacaoHttp();
+const clienteAutenticacaoHttp = new ClienteAutenticacaoHttp();
+
+export const clienteEntradaAutenticacao: ClienteEntradaAutenticacao =
+  clienteAutenticacaoHttp;
+
+export const clienteCadastroAutenticacao: ClienteCadastroAutenticacao =
+  clienteAutenticacaoHttp;
+
+export const clienteAutenticacao: ClienteAutenticacao = clienteAutenticacaoHttp;

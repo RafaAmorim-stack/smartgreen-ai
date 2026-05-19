@@ -51,15 +51,76 @@ class CorredorOperacional {
   }
 }
 
+interface ContextoSimulacaoVia {
+  via: RegistroVia;
+  perfil: PerfilOperacional;
+  segundosPassados: number;
+  sortearInteiro(minimo: number, maximo: number): number;
+  sortearDecimal(minimo: number, maximo: number): number;
+}
+
+interface EstrategiaSimulacaoVia {
+  simular(contexto: ContextoSimulacaoVia): number;
+}
+
+class EstrategiaViaAberta implements EstrategiaSimulacaoVia {
+  simular(contexto: ContextoSimulacaoVia): number {
+    const multiplicadorDeTempo = Math.max(
+      0.9,
+      Math.min(1.2, contexto.segundosPassados / 5),
+    );
+    const percentualReducao = Math.min(
+      0.24,
+      0.08 +
+        multiplicadorDeTempo * 0.05 +
+        contexto.sortearDecimal(0.01, 0.03),
+    );
+    const quantidadeSaindo = Math.max(
+      1,
+      Math.round(contexto.via.quantidadeVeiculosAtual * percentualReducao),
+    );
+    const novasChegadas = Math.round(
+      contexto.sortearInteiro(
+        contexto.perfil.chegadaMinima,
+        contexto.perfil.chegadaMaxima,
+      ) * 0.65,
+    );
+
+    return (
+      contexto.via.quantidadeVeiculosAtual - quantidadeSaindo + novasChegadas
+    );
+  }
+}
+
+class EstrategiaViaFechada implements EstrategiaSimulacaoVia {
+  simular(contexto: ContextoSimulacaoVia): number {
+    const multiplicadorDeTempo = Math.max(
+      0.9,
+      Math.min(1.2, contexto.segundosPassados / 5),
+    );
+    const novasChegadas =
+      Math.round(
+        contexto.sortearInteiro(
+          contexto.perfil.chegadaMinima,
+          contexto.perfil.chegadaMaxima,
+        ) * multiplicadorDeTempo,
+      ) + contexto.sortearInteiro(0, 1);
+
+    return contexto.via.quantidadeVeiculosAtual + novasChegadas;
+  }
+}
+
 export class EngenhariaDeTrafego {
   private readonly tempoMinimoVerdeSegundos = 18;
   private readonly tempoMaximoVerdeSegundos = 44;
   private readonly diferencaUrgente = 10;
   private readonly diferencaEstavel = 4;
+  private readonly estrategiaViaAberta = new EstrategiaViaAberta();
+  private readonly estrategiaViaFechada = new EstrategiaViaFechada();
   private readonly perfis = new Map<TipoChaveVia, PerfilOperacional>([
-    [ChaveVia.NORTE, new PerfilOperacional(ChaveVia.NORTE, 8, 46, 2, 5)],
-    [ChaveVia.LESTE, new PerfilOperacional(ChaveVia.LESTE, 9, 52, 3, 6)],
-    [ChaveVia.SUL, new PerfilOperacional(ChaveVia.SUL, 8, 48, 2, 5)],
+    [ChaveVia.NORTE, new PerfilOperacional(ChaveVia.NORTE, 4, 20, 1, 3)],
+    [ChaveVia.LESTE, new PerfilOperacional(ChaveVia.LESTE, 4, 20, 1, 3)],
+    [ChaveVia.SUL, new PerfilOperacional(ChaveVia.SUL, 4, 20, 1, 3)],
   ]);
 
   processarCenarioAtual(
@@ -256,37 +317,16 @@ export class EngenhariaDeTrafego {
   ): ViaSimulada {
     const perfil = this.obterPerfil(via.chave);
     const estaAberta = idsAbertosAtuais.includes(via.id);
-    const multiplicadorDeTempo = Math.max(
-      0.9,
-      Math.min(1.2, segundosPassados / 5),
-    );
-
-    let quantidadeSimulada = via.quantidadeVeiculosAtual;
-
-    if (estaAberta) {
-      const percentualReducao = Math.min(
-        0.24,
-        0.08 + multiplicadorDeTempo * 0.05 + this.sortearDecimal(0.01, 0.03),
-      );
-      const quantidadeSaindo = Math.max(
-        1,
-        Math.round(via.quantidadeVeiculosAtual * percentualReducao),
-      );
-      const novasChegadas = Math.round(
-        this.sortearInteiro(perfil.chegadaMinima, perfil.chegadaMaxima) * 0.65,
-      );
-
-      quantidadeSimulada =
-        via.quantidadeVeiculosAtual - quantidadeSaindo + novasChegadas;
-    } else {
-      const novasChegadas =
-        Math.round(
-          this.sortearInteiro(perfil.chegadaMinima, perfil.chegadaMaxima) *
-            multiplicadorDeTempo,
-        ) + this.sortearInteiro(0, 1);
-
-      quantidadeSimulada = via.quantidadeVeiculosAtual + novasChegadas;
-    }
+    const estrategia = estaAberta
+      ? this.estrategiaViaAberta
+      : this.estrategiaViaFechada;
+    const quantidadeSimulada = estrategia.simular({
+      via,
+      perfil,
+      segundosPassados,
+      sortearInteiro: (minimo, maximo) => this.sortearInteiro(minimo, maximo),
+      sortearDecimal: (minimo, maximo) => this.sortearDecimal(minimo, maximo),
+    });
 
     return {
       id: via.id,

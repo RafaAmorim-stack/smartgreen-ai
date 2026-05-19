@@ -1,5 +1,9 @@
 "use client";
 import {
+  AlertCircle,
+  CheckCircle2,
+  Eye,
+  EyeOff,
   LockKeyhole,
   LogIn,
   Mail,
@@ -9,7 +13,10 @@ import {
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { armazenamentoSessao } from "@/servicos/armazenamento-sessao";
-import { clienteAutenticacao } from "@/servicos/cliente-autenticacao";
+import {
+  clienteCadastroAutenticacao,
+  clienteEntradaAutenticacao,
+} from "@/servicos/cliente-autenticacao";
 
 type ModoAcesso = "entrar" | "cadastrar";
 
@@ -32,6 +39,8 @@ export function FormularioAcesso() {
   const [senha, setSenha] = useState("");
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
+  const [mensagemSucesso, setMensagemSucesso] = useState("");
+  const [exibirSenha, setExibirSenha] = useState(false);
 
   useEffect(() => {
     const token = armazenamentoSessao.obterToken();
@@ -43,23 +52,42 @@ export function FormularioAcesso() {
   }, [roteador]);
 
   const painelAtual = useMemo(() => conteudoModo[modoAcesso], [modoAcesso]);
+  const emailNormalizado = email.trim();
+  const formularioValido = useMemo(() => {
+    const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNormalizado);
+    const senhaValida = senha.length >= 6;
+    const nomeValido =
+      modoAcesso === "entrar" || nomeCompleto.trim().length >= 3;
+
+    return emailValido && senhaValida && nomeValido;
+  }, [emailNormalizado, modoAcesso, nomeCompleto, senha]);
 
   async function enviarFormulario(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     setErro("");
+    setMensagemSucesso("");
+
+    if (!formularioValido) {
+      setErro("Revise os campos destacados antes de continuar.");
+      return;
+    }
+
     setCarregando(true);
 
     try {
       if (modoAcesso === "entrar") {
-        const resposta = await clienteAutenticacao.entrar({ email, senha });
+        const resposta = await clienteEntradaAutenticacao.entrar({
+          email: emailNormalizado,
+          senha,
+        });
         armazenamentoSessao.salvarSessao(resposta);
         roteador.replace("/sistema");
         return;
       }
 
-      await clienteAutenticacao.cadastrar({
+      await clienteCadastroAutenticacao.cadastrar({
         nomeCompleto,
-        email,
+        email: emailNormalizado,
         senha,
       });
 
@@ -67,6 +95,7 @@ export function FormularioAcesso() {
       setNomeCompleto("");
       setEmail("");
       setSenha("");
+      setMensagemSucesso("Cadastro criado. Entre com seu e-mail e senha.");
     } catch (erroEnvio) {
       setErro(
         erroEnvio instanceof Error
@@ -84,6 +113,7 @@ export function FormularioAcesso() {
     setEmail("");
     setSenha("");
     setErro("");
+    setMensagemSucesso("");
   }
 
   function mostrarMensagemRecuperacao() {
@@ -96,6 +126,7 @@ export function FormularioAcesso() {
     setEmail("");
     setSenha("");
     setErro("");
+    setMensagemSucesso("");
   }
 
   return (
@@ -138,7 +169,11 @@ export function FormularioAcesso() {
           </button>
         </div>
 
-        <form className="space-y-4" onSubmit={enviarFormulario}>
+        <form
+          className="space-y-4"
+          onSubmit={enviarFormulario}
+          aria-busy={carregando}
+        >
           {modoAcesso === "cadastrar" ? (
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-slate-700">
@@ -153,6 +188,7 @@ export function FormularioAcesso() {
                   placeholder="Digite seu nome completo"
                   className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
                   autoComplete="name"
+                  minLength={3}
                   required
                 />
               </div>
@@ -172,6 +208,7 @@ export function FormularioAcesso() {
                 placeholder="Digite seu e-mail"
                 className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
                 autoComplete="email"
+                aria-invalid={Boolean(email) && !emailNormalizado.includes("@")}
                 required
               />
             </div>
@@ -184,7 +221,7 @@ export function FormularioAcesso() {
             <div className="flex items-center gap-2 rounded-[14px] border border-[var(--smartgreen-line)] px-4 py-3">
               <LockKeyhole className="h-4 w-4 text-[var(--smartgreen-green)]" />
               <input
-                type="password"
+                type={exibirSenha ? "text" : "password"}
                 value={senha}
                 onChange={(evento) => setSenha(evento.target.value)}
                 placeholder="Digite sua senha"
@@ -192,21 +229,53 @@ export function FormularioAcesso() {
                 autoComplete={
                   modoAcesso === "entrar" ? "current-password" : "new-password"
                 }
+                minLength={6}
+                aria-describedby="senha-ajuda"
                 required
               />
+              <button
+                type="button"
+                onClick={() => setExibirSenha((valorAtual) => !valorAtual)}
+                className="rounded-full p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--smartgreen-green)]"
+                aria-label={exibirSenha ? "Ocultar senha" : "Mostrar senha"}
+              >
+                {exibirSenha ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
             </div>
+            <p id="senha-ajuda" className="mt-2 text-xs text-slate-500">
+              Use no minimo 6 caracteres.
+            </p>
           </label>
 
+          {mensagemSucesso ? (
+            <div
+              role="status"
+              aria-live="polite"
+              className="flex items-start gap-2 rounded-[14px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+            >
+              <CheckCircle2 className="mt-0.5 h-4 w-4 flex-none" />
+              <span>{mensagemSucesso}</span>
+            </div>
+          ) : null}
+
           {erro ? (
-            <div className="border-l-2 border-[var(--smartgreen-green)] pl-4 text-sm text-[var(--smartgreen-green)]">
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-[14px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 flex-none" />
               <span>{erro}</span>
             </div>
           ) : null}
 
           <button
             type="submit"
-            disabled={carregando}
-            className="flex w-full items-center justify-center rounded-[14px] bg-[var(--smartgreen-green)] px-4 py-3.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
+            disabled={carregando || !formularioValido}
+            className="flex min-h-12 w-full items-center justify-center rounded-[14px] bg-[var(--smartgreen-green)] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[var(--smartgreen-green-soft)] focus:outline-none focus:ring-2 focus:ring-[var(--smartgreen-green)] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {carregando ? painelAtual.carregando : painelAtual.acao}
           </button>
@@ -216,7 +285,7 @@ export function FormularioAcesso() {
               <button
                 type="button"
                 onClick={mostrarMensagemRecuperacao}
-                className="text-xs text-[var(--smartgreen-green)] underline underline-offset-4"
+                className="rounded px-1 py-1 text-xs text-[var(--smartgreen-green)] underline underline-offset-4 focus:outline-none focus:ring-2 focus:ring-[var(--smartgreen-green)]"
               >
                 Esqueceu a senha?
               </button>
@@ -226,7 +295,7 @@ export function FormularioAcesso() {
               <button
                 type="button"
                 onClick={limparFormulario}
-                className="text-xs text-slate-400 underline underline-offset-4"
+                className="rounded px-1 py-1 text-xs text-slate-500 underline underline-offset-4 focus:outline-none focus:ring-2 focus:ring-[var(--smartgreen-green)]"
               >
                 Limpar campos
               </button>

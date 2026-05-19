@@ -1,6 +1,6 @@
 # Deploy da API e Banco no Railway
 
-A landing pode ficar na Vercel, mas o MVP so funciona para usuarios finais se a
+O frontend pode ficar na Vercel, mas o MVP so funciona para usuarios finais se a
 API NestJS e o MySQL tambem estiverem publicos. Um caminho simples e usar
 Railway para hospedar `backend` + MySQL.
 
@@ -35,11 +35,11 @@ No servico da API, configure:
 ```text
 DATABASE_URL=${{MySQL.MYSQL_URL}}
 JWT_SECRET=troque-por-uma-chave-grande-e-segura
-CORS_ORIGINS=https://sua-landing.vercel.app
+CORS_ORIGINS=https://seu-frontend.vercel.app
 ```
 
-Depois que a Vercel gerar a URL real da landing, volte no Railway e substitua
-`https://sua-landing.vercel.app` pela URL final.
+Depois que a Vercel gerar a URL real do frontend, volte no Railway e substitua
+`https://seu-frontend.vercel.app` pela URL final.
 
 ## 4. Gerar dominio publico da API
 
@@ -77,7 +77,7 @@ Senha: smartgreen123
 
 ## 6. Atualizar variaveis da Vercel
 
-Na Vercel, abra o projeto da landing e configure:
+Na Vercel, abra o projeto do frontend e configure:
 
 ```text
 NEXT_PUBLIC_API_URL=https://smartgreen-api-production.up.railway.app/api
@@ -90,10 +90,9 @@ Depois clique em **Redeploy** na Vercel.
 
 ## 7. Checklist final
 
-- Landing abre em `/`
-- Botao de formulario abre o Google Forms
-- Botao do MVP abre `/sistema`
-- Painel principal abre sem tela de login
+- Tela de login abre em `/`
+- Login ou cadastro abre `/sistema`
+- Secao de status dos semaforos aparece no topo
 - Painel `/sistema` carrega vias e semaforo
 - Swagger abre em `/api/docs`
 - Saude da API abre em `/api/saude`

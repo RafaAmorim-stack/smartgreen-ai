@@ -21,12 +21,11 @@ export function VisaoCruzamento({
               Fluxo das Vias
             </p>
             <h2 className="mt-4 text-2xl font-semibold text-slate-900 sm:text-3xl">
-              Cards numericos para comparar congestionamento por via
+              Quantidade de veiculos por via monitorada
             </h2>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">
-              Cada card mostra a quantidade de veiculos, o estado do semaforo e
-              o sentido monitorado, facilitando a identificacao da via com maior
-              fluxo.
+              Cada card mostra a leitura atual de veiculos, o sentido
+              monitorado e a sinalizacao aplicada no ciclo inteligente.
             </p>
           </div>
 

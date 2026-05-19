@@ -1,4 +1,4 @@
-# Deploy da Landing Page na Vercel
+# Deploy do Frontend na Vercel
 
 Este projeto e um monorepo. Na Vercel, publique apenas a pasta `frontend`.
 
@@ -9,7 +9,7 @@ Confirme que as alteracoes estao no GitHub:
 ```bash
 git status
 git add .
-git commit -m "Prepara landing page para deploy na Vercel"
+git commit -m "Prepara frontend para deploy na Vercel"
 git push origin codex/sm12-24-TELA_LOGIN
 ```
 
@@ -47,8 +47,8 @@ NEXT_PUBLIC_MVP_URL=/sistema
 NEXT_PUBLIC_FORMULARIO_VALIDACAO_URL=https://docs.google.com/forms/d/e/1FAIpQLSfsX2KAt-usKDsvfRZ2zAClX_Sa9IzO31eJCtXft-KeTLkujQ/viewform?usp=header
 ```
 
-Enquanto a API publica nao existir, a landing abre normalmente, mas o painel
-funcional nao vai carregar dados para usuarios externos. O passo a passo para
+Enquanto a API publica nao existir, a tela de login abre normalmente, mas o
+menu principal nao vai carregar dados para usuarios externos. O passo a passo para
 publicar a API e o banco esta em `docs/deploy-api-railway.md`.
 
 ## 4. Deploy
@@ -63,8 +63,7 @@ https://smartgreen-ai.vercel.app
 
 Abra a URL final e teste:
 
-- A landing carrega em `/`
-- O botao de validacao abre o Google Forms
-- O botao do MVP abre `/sistema`
-- O painel carrega sem tela de login
+- A tela de login carrega em `/`
+- Login ou cadastro redireciona para `/sistema`
+- A secao de status dos semaforos aparece no topo do menu principal
 - O painel `/sistema` carrega os dados do backend hospedado

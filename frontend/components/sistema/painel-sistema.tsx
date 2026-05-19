@@ -1,14 +1,25 @@
 "use client";
 
-import { AlertTriangle, LogOut, RefreshCcw } from "lucide-react";
+import {
+  AlertTriangle,
+  LogOut,
+  RefreshCcw,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { armazenamentoSessao } from "@/servicos/armazenamento-sessao";
-import { ClienteTrafego } from "@/servicos/interfaces/cliente-trafego";
-import { clienteTrafego } from "@/servicos/cliente-trafego";
+import {
+  clienteConsultaTrafego,
+  clienteSimulacaoTrafego,
+} from "@/servicos/cliente-trafego";
 import { ErroApi } from "@/servicos/cliente-http";
+import type {
+  ClienteConsultaTrafego,
+  ClienteSimulacaoTrafego,
+} from "@/servicos/interfaces/cliente-trafego";
 import type { UsuarioSessao, VisaoSistema, VisaoVia } from "@/tipos/trafego";
 import { ResumoSistema } from "./resumo-sistema";
+import { StatusSemaforos } from "./status-semaforos";
 import { VisaoCruzamento } from "./visao-cruzamento";
 
 const INTERVALO_ATUALIZACAO_AUTOMATICA = 5;
@@ -43,7 +54,9 @@ function encontrarViaMaiorFluxo(vias: VisaoVia[]): VisaoVia | null {
 }
 
 export function PainelSistema() {
-  const servicoTrafego: ClienteTrafego = clienteTrafego;
+  const servicoConsultaTrafego: ClienteConsultaTrafego = clienteConsultaTrafego;
+  const servicoSimulacaoTrafego: ClienteSimulacaoTrafego =
+    clienteSimulacaoTrafego;
   const roteador = useRouter();
   const [tokenAcesso, setTokenAcesso] = useState<string | null>(null);
   const [usuario, setUsuario] = useState<UsuarioSessao | null>(null);
@@ -61,61 +74,50 @@ export function PainelSistema() {
   useEffect(() => {
     const tokenSalvo = armazenamentoSessao.obterToken();
 
-    setTokenAcesso(tokenSalvo);
-    setUsuario(armazenamentoSessao.obterUsuario());
-  }, []);
-
-  useEffect(() => {
-    const tokenAtual = tokenAcesso;
-    let componenteAtivo = true;
-
-    async function carregarVisaoInicial() {
-      try {
-        setErro(null);
-        const resposta = await servicoTrafego.obterVisaoGeral(
-          tokenAtual ?? undefined,
-        );
-
-        if (componenteAtivo) {
-          setVisaoSistema(resposta);
-        }
-      } catch (erroCarregamento) {
-        if (!componenteAtivo) {
-          return;
-        }
-
-        if (
-          erroCarregamento instanceof ErroApi &&
-          (erroCarregamento.statusCode === 401 ||
-            erroCarregamento.statusCode === 403)
-        ) {
-          armazenamentoSessao.limparSessao();
-          setTokenAcesso(null);
-          setUsuario(null);
-          setErro(
-            "A API publica precisa estar atualizada para liberar o painel sem login.",
-          );
-          return;
-        }
-
-        setErro(
-          erroCarregamento instanceof Error
-            ? erroCarregamento.message
-            : "Nao foi possivel carregar o painel de monitoramento.",
-        );
-      } finally {
-        if (componenteAtivo) {
-          setCarregando(false);
-        }
-      }
+    if (!tokenSalvo) {
+      roteador.replace("/");
+      return;
     }
 
-    void carregarVisaoInicial();
+    setTokenAcesso(tokenSalvo);
+    setUsuario(armazenamentoSessao.obterUsuario());
+  }, [roteador]);
 
-    return () => {
-      componenteAtivo = false;
-    };
-  }, [roteador, servicoTrafego, tokenAcesso]);
+  const carregarVisao = useCallback(async () => {
+    if (!tokenAcesso) {
+      return;
+    }
+
+    const tokenAtual = tokenAcesso;
+
+    try {
+      setErro(null);
+      const resposta = await servicoConsultaTrafego.obterVisaoGeral(tokenAtual);
+      setVisaoSistema(resposta);
+    } catch (erroCarregamento) {
+      if (
+        erroCarregamento instanceof ErroApi &&
+        (erroCarregamento.statusCode === 401 ||
+          erroCarregamento.statusCode === 403)
+      ) {
+        armazenamentoSessao.limparSessao();
+        roteador.replace("/");
+        return;
+      }
+
+      setErro(
+        erroCarregamento instanceof Error
+          ? erroCarregamento.message
+          : "Nao foi possivel carregar o painel de monitoramento.",
+      );
+    } finally {
+      setCarregando(false);
+    }
+  }, [roteador, servicoConsultaTrafego, tokenAcesso]);
+
+  useEffect(() => {
+    void carregarVisao();
+  }, [carregarVisao]);
 
   useEffect(() => {
     if (!visaoSistema) {
@@ -166,10 +168,14 @@ export function PainelSistema() {
   }, [visaoSistema]);
 
   const simularAgora = useCallback(async () => {
+    if (!tokenAcesso) {
+      return;
+    }
+
     try {
       setAtualizando(true);
       setErro(null);
-      const resposta = await servicoTrafego.simular(tokenAcesso ?? undefined);
+      const resposta = await servicoSimulacaoTrafego.simular(tokenAcesso);
       setVisaoSistema(resposta);
       setSegundosRestantes(INTERVALO_ATUALIZACAO_AUTOMATICA);
     } catch (erroSimulacao) {
@@ -179,11 +185,7 @@ export function PainelSistema() {
           erroSimulacao.statusCode === 403)
       ) {
         armazenamentoSessao.limparSessao();
-        setTokenAcesso(null);
-        setUsuario(null);
-        setErro(
-          "A API publica precisa estar atualizada para simular sem login.",
-        );
+        roteador.replace("/");
         return;
       }
 
@@ -195,9 +197,13 @@ export function PainelSistema() {
     } finally {
       setAtualizando(false);
     }
-  }, [roteador, servicoTrafego, tokenAcesso]);
+  }, [roteador, servicoSimulacaoTrafego, tokenAcesso]);
 
   useEffect(() => {
+    if (!tokenAcesso) {
+      return;
+    }
+
     const contador = window.setInterval(() => {
       setSegundosRestantes((valorAtual) =>
         valorAtual <= 1 ? INTERVALO_ATUALIZACAO_AUTOMATICA : valorAtual - 1,
@@ -212,9 +218,15 @@ export function PainelSistema() {
       window.clearInterval(contador);
       window.clearInterval(atualizacaoAutomatica);
     };
-  }, [simularAgora]);
+  }, [tokenAcesso, simularAgora]);
 
   function sair() {
+    const confirmouSaida = window.confirm("Deseja sair do SmartGreen?");
+
+    if (!confirmouSaida) {
+      return;
+    }
+
     armazenamentoSessao.limparSessao();
     roteador.push("/");
   }
@@ -277,13 +289,22 @@ export function PainelSistema() {
             <p className="text-base text-rose-600">
               {erro ?? "Nao foi possivel carregar os dados principais do sistema."}
             </p>
-            <button
-              type="button"
-              onClick={() => roteador.push("/")}
-              className="mt-6 rounded-[16px] bg-[var(--smartgreen-green)] px-5 py-3 text-sm font-semibold text-white"
-            >
-              Voltar para o acesso
-            </button>
+            <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => void carregarVisao()}
+                className="rounded-[16px] bg-[var(--smartgreen-green)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--smartgreen-green-soft)] focus:outline-none focus:ring-2 focus:ring-[var(--smartgreen-green)] focus:ring-offset-2"
+              >
+                Tentar novamente
+              </button>
+              <button
+                type="button"
+                onClick={() => roteador.push("/")}
+                className="rounded-[16px] border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--smartgreen-green)] focus:ring-offset-2"
+              >
+                Voltar para o acesso
+              </button>
+            </div>
           </div>
         </div>
       </main>
@@ -296,18 +317,13 @@ export function PainelSistema() {
         <header className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-4">
-              <div className="inline-flex rounded-full bg-emerald-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.28em] text-emerald-700">
-                RF1 · Monitoramento do Fluxo
-              </div>
-
               <div>
                 <h1 className="text-3xl font-semibold text-slate-900 sm:text-4xl">
-                  Painel de fluxo de veiculos por via
+                  Menu SmartGreen
                 </h1>
                 <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">
-                  Visualize as quantidades de veiculos nas vias monitoradas,
-                  identifique rapidamente o maior congestionamento e acompanhe as
-                  mudancas automaticas do cruzamento.
+                  Acompanhe primeiro o status atual dos semaforos e, em seguida,
+                  monitore o fluxo de veiculos nas vias do cruzamento.
                 </p>
               </div>
 
@@ -316,8 +332,7 @@ export function PainelSistema() {
                   {visaoSistemaAoVivo.enderecoCruzamento}
                 </span>
                 <span className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-emerald-700">
-                  Atualizacao automatica a cada {INTERVALO_ATUALIZACAO_AUTOMATICA}
-                  s
+                  Atualizacao automatica a cada {INTERVALO_ATUALIZACAO_AUTOMATICA}s
                 </span>
               </div>
             </div>
@@ -325,22 +340,22 @@ export function PainelSistema() {
             <div className="flex w-full max-w-sm flex-col gap-3">
               <div className="rounded-[20px] border border-slate-200 bg-slate-50 px-4 py-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-                  Acesso ao MVP
+                  Usuario conectado
                 </p>
                 <p className="mt-2 text-base font-semibold text-slate-900">
-                  {usuario?.nome ?? "Visitante da landing"}
+                  {usuario?.nome ?? "Gestor de transito"}
                 </p>
                 <p className="mt-1 text-sm text-slate-600">
-                  {usuario?.email ?? "demonstracao publica"}
+                  {usuario?.email ?? "ambiente local"}
                 </p>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3">
                 <button
                   type="button"
                   onClick={() => void simularAgora()}
                   disabled={atualizando}
-                  className="inline-flex items-center justify-center gap-2 rounded-[16px] bg-[var(--smartgreen-green)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--smartgreen-green-soft)] disabled:cursor-not-allowed disabled:opacity-70"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-[16px] bg-[var(--smartgreen-green)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--smartgreen-green-soft)] focus:outline-none focus:ring-2 focus:ring-[var(--smartgreen-green)] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   <RefreshCcw
                     className={`h-4 w-4 ${atualizando ? "animate-spin" : ""}`}
@@ -351,10 +366,10 @@ export function PainelSistema() {
                 <button
                   type="button"
                   onClick={sair}
-                  className="inline-flex items-center justify-center gap-2 rounded-[16px] border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-[16px] border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--smartgreen-green)] focus:ring-offset-2"
                 >
                   <LogOut className="h-4 w-4" />
-                  Voltar
+                  Sair
                 </button>
               </div>
             </div>
@@ -362,11 +377,28 @@ export function PainelSistema() {
         </header>
 
         {erro ? (
-          <div className="flex items-start gap-3 rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
-            <AlertTriangle className="mt-0.5 h-4 w-4 flex-none" />
-            <span>{erro}</span>
+          <div
+            role="alert"
+            className="flex flex-col gap-3 rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-4 w-4 flex-none" />
+              <span>{erro}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => void carregarVisao()}
+              className="inline-flex min-h-10 items-center justify-center rounded-[14px] border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-800 transition hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+            >
+              Tentar novamente
+            </button>
           </div>
         ) : null}
+
+        <StatusSemaforos
+          vias={visaoSistemaAoVivo.vias}
+          semaforo={visaoSistemaAoVivo.semaforo}
+        />
 
         <ResumoSistema
           visaoSistema={visaoSistemaAoVivo}

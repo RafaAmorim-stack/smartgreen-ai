@@ -11,9 +11,15 @@ export interface DadosCadastroAutenticacao {
   senha: string;
 }
 
-export interface ClienteAutenticacao {
+export interface ClienteEntradaAutenticacao {
   entrar(dadosEntrada: DadosEntradaAutenticacao): Promise<RespostaAutenticacao>;
+}
+
+export interface ClienteCadastroAutenticacao {
   cadastrar(
     dadosCadastro: DadosCadastroAutenticacao,
   ): Promise<RespostaAutenticacao>;
 }
+
+export type ClienteAutenticacao = ClienteEntradaAutenticacao &
+  ClienteCadastroAutenticacao;
