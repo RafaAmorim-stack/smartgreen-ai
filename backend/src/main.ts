@@ -41,6 +41,19 @@ async function bootstrap() {
     )
     .setVersion("1.0.0")
     .addTag("Autenticacao", "Operacoes de cadastro e login")
+    .addTag(
+      "Controle de trafego",
+      "Operacoes da Sprint 2 para RF1 e RF3",
+    )
+    .addBearerAuth(
+      {
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "JWT",
+        description: "Informe o token JWT retornado pela rota de login.",
+      },
+      "jwt",
+    )
     .build();
   const documentoSwagger = SwaggerModule.createDocument(
     app,
