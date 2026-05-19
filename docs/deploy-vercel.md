@@ -47,9 +47,10 @@ NEXT_PUBLIC_MVP_URL=/sistema
 NEXT_PUBLIC_FORMULARIO_VALIDACAO_URL=https://docs.google.com/forms/d/e/1FAIpQLSfsX2KAt-usKDsvfRZ2zAClX_Sa9IzO31eJCtXft-KeTLkujQ/viewform?usp=header
 ```
 
-Enquanto a API publica nao existir, a tela de login abre normalmente, mas o
-menu principal nao vai carregar dados para usuarios externos. O passo a passo para
-publicar a API e o banco esta em `docs/deploy-api-railway.md`.
+Enquanto a API publica nao existir, o Menu SmartGreen abre em modo demonstracao
+na rota `/`, permitindo apresentar RF1 e RF3 no Vercel. A rota `/acesso` mantem
+login e cadastro para teste autenticado quando a API publica estiver configurada.
+O passo a passo para publicar a API e o banco esta em `docs/deploy-api-railway.md`.
 
 ## 4. Deploy
 
@@ -63,7 +64,7 @@ https://smartgreen-ai.vercel.app
 
 Abra a URL final e teste:
 
-- A tela de login carrega em `/`
-- Login ou cadastro redireciona para `/sistema`
+- O Menu SmartGreen carrega em `/`
+- A tela de login e cadastro carrega em `/acesso`
 - A secao de status dos semaforos aparece no topo do menu principal
-- O painel `/sistema` carrega os dados do backend hospedado
+- O painel `/sistema` tambem abre o Menu SmartGreen
