@@ -76,9 +76,9 @@ Principais arquivos:
 
 Rotas principais:
 
-- `/`: tela de login e cadastro
-- `/sistema`: menu principal autenticado com RF1 e RF3
-- `/acesso`: rota alternativa de login e cadastro
+- `/`: menu principal em modo demonstracao com RF1 e RF3
+- `/sistema`: menu principal em modo demonstracao com RF1 e RF3
+- `/acesso`: tela de login e cadastro
 
 Variaveis publicas relevantes:
 
@@ -94,7 +94,8 @@ Checklist para entrega publicada:
 - Configurar `NEXT_PUBLIC_API_URL` com a URL publica da API
 - Configurar `NEXT_PUBLIC_MVP_URL` com a URL publica da rota de acesso ao MVP
 - Criar/publicar o Google Forms e configurar `NEXT_PUBLIC_FORMULARIO_VALIDACAO_URL`
-- Testar o fluxo: login -> menu principal -> status dos semaforos -> fluxo de veiculos
+- Testar o fluxo demonstrativo: menu principal -> status dos semaforos -> fluxo de veiculos
+- Testar o fluxo autenticado pela rota `/acesso`, quando a API publica estiver configurada
 
 ## Banco de dados
 

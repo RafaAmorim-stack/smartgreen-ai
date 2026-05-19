@@ -24,6 +24,17 @@ import { VisaoCruzamento } from "./visao-cruzamento";
 
 const INTERVALO_ATUALIZACAO_AUTOMATICA = 5;
 const INTERVALO_ANIMACAO_CONTADORES = 900;
+const LIMITE_DEMONSTRACAO = 20;
+
+interface PropriedadesPainelSistema {
+  modoDemonstracao?: boolean;
+}
+
+const usuarioDemonstracao: UsuarioSessao = {
+  id: "demo-smartgreen",
+  nome: "Equipe SmartGreen",
+  email: "demo@smartgreen.ai",
+};
 
 function calcularPassoSuave(valorAtual: number, valorDestino: number): number {
   const diferenca = valorDestino - valorAtual;
@@ -53,7 +64,115 @@ function encontrarViaMaiorFluxo(vias: VisaoVia[]): VisaoVia | null {
   })[0];
 }
 
-export function PainelSistema() {
+function limitarQuantidade(valor: number): number {
+  return Math.max(4, Math.min(LIMITE_DEMONSTRACAO, valor));
+}
+
+function selecionarPrioridade(vias: VisaoVia[]): "vertical" | "leste" {
+  const viaNorte = vias.find((via) => via.chave === "NORTH");
+  const viaSul = vias.find((via) => via.chave === "SOUTH");
+  const viaLeste = vias.find((via) => via.chave === "EAST");
+  const fluxoVertical =
+    (viaNorte?.quantidadeVeiculos ?? 0) + (viaSul?.quantidadeVeiculos ?? 0);
+
+  return fluxoVertical > (viaLeste?.quantidadeVeiculos ?? 0) + 6
+    ? "vertical"
+    : "leste";
+}
+
+function montarVisaoDemonstracao(viasBase?: VisaoVia[]): VisaoSistema {
+  const vias: VisaoVia[] =
+    viasBase ?? [
+      {
+        id: "via-norte-demo",
+        chave: "NORTH",
+        nome: "Via Norte",
+        descricao: "Fluxo monitorado no sentido Norte para Sul.",
+        quantidadeVeiculos: 14,
+        corSemaforo: "GREEN",
+        estaPrioritaria: true,
+        sentido: "Norte para Sul",
+      },
+      {
+        id: "via-leste-demo",
+        chave: "EAST",
+        nome: "Via Leste",
+        descricao: "Fluxo monitorado no sentido Leste para Oeste.",
+        quantidadeVeiculos: 18,
+        corSemaforo: "RED",
+        estaPrioritaria: false,
+        sentido: "Leste para Oeste",
+      },
+      {
+        id: "via-sul-demo",
+        chave: "SOUTH",
+        nome: "Via Sul",
+        descricao: "Fluxo monitorado no sentido Sul para Norte.",
+        quantidadeVeiculos: 12,
+        corSemaforo: "GREEN",
+        estaPrioritaria: true,
+        sentido: "Sul para Norte",
+      },
+    ];
+  const prioridade = selecionarPrioridade(vias);
+  const viasComSemaforo = vias.map((via) => {
+    const estaPrioritaria =
+      prioridade === "vertical"
+        ? via.chave === "NORTH" || via.chave === "SOUTH"
+        : via.chave === "EAST";
+
+    return {
+      ...via,
+      corSemaforo: estaPrioritaria ? "GREEN" : "RED",
+      estaPrioritaria,
+    } satisfies VisaoVia;
+  });
+  const nomePrioridade =
+    prioridade === "vertical" ? "Corredor Norte-Sul" : "Via Leste";
+  const maiorFluxo = encontrarViaMaiorFluxo(viasComSemaforo);
+  const atualizadoEm = new Date().toISOString();
+
+  return {
+    geradoEm: atualizadoEm,
+    enderecoCruzamento: "Cruzamento Av. Afonso Vergueiro x R. Professor Toledo",
+    idViaPrioritaria:
+      prioridade === "vertical"
+        ? viasComSemaforo.find((via) => via.chave === "NORTH")?.id ?? null
+        : viasComSemaforo.find((via) => via.chave === "EAST")?.id ?? null,
+    nomeViaPrioritaria: nomePrioridade,
+    mensagem: `${nomePrioridade} esta priorizado no modo demonstracao para aliviar o fluxo de ${maiorFluxo?.quantidadeVeiculos ?? 0} veiculos na via mais carregada.`,
+    vias: viasComSemaforo,
+    semaforo: {
+      id: "semaforo-demo",
+      modo: "AUTOMATIC",
+      statusTexto: `${nomePrioridade} liberado em modo demonstracao.`,
+      chaveViaPrioritariaAtual: prioridade === "vertical" ? "NORTH" : "EAST",
+      nomeViaPrioritariaAtual: nomePrioridade,
+      duracaoCicloSegundos: 34,
+      tempoVerdeSegundos: 14,
+      atualizadoEm,
+    },
+  };
+}
+
+function simularVisaoDemonstracao(visaoAtual: VisaoSistema): VisaoSistema {
+  const proximasVias = visaoAtual.vias.map((via) => {
+    const variacao = via.estaPrioritaria
+      ? -Math.floor(Math.random() * 3)
+      : Math.floor(Math.random() * 3) + 1;
+
+    return {
+      ...via,
+      quantidadeVeiculos: limitarQuantidade(via.quantidadeVeiculos + variacao),
+    };
+  });
+
+  return montarVisaoDemonstracao(proximasVias);
+}
+
+export function PainelSistema({
+  modoDemonstracao = false,
+}: PropriedadesPainelSistema) {
   const servicoConsultaTrafego: ClienteConsultaTrafego = clienteConsultaTrafego;
   const servicoSimulacaoTrafego: ClienteSimulacaoTrafego =
     clienteSimulacaoTrafego;
@@ -75,16 +194,27 @@ export function PainelSistema() {
     const tokenSalvo = armazenamentoSessao.obterToken();
 
     if (!tokenSalvo) {
+      if (modoDemonstracao) {
+        setUsuario(usuarioDemonstracao);
+        return;
+      }
+
       roteador.replace("/");
       return;
     }
 
     setTokenAcesso(tokenSalvo);
     setUsuario(armazenamentoSessao.obterUsuario());
-  }, [roteador]);
+  }, [modoDemonstracao, roteador]);
 
   const carregarVisao = useCallback(async () => {
     if (!tokenAcesso) {
+      if (modoDemonstracao) {
+        setErro(null);
+        setVisaoSistema(montarVisaoDemonstracao());
+        setCarregando(false);
+      }
+
       return;
     }
 
@@ -113,7 +243,7 @@ export function PainelSistema() {
     } finally {
       setCarregando(false);
     }
-  }, [roteador, servicoConsultaTrafego, tokenAcesso]);
+  }, [modoDemonstracao, roteador, servicoConsultaTrafego, tokenAcesso]);
 
   useEffect(() => {
     void carregarVisao();
@@ -169,6 +299,16 @@ export function PainelSistema() {
 
   const simularAgora = useCallback(async () => {
     if (!tokenAcesso) {
+      if (modoDemonstracao) {
+        setAtualizando(true);
+        setErro(null);
+        setVisaoSistema((visaoAtual) =>
+          simularVisaoDemonstracao(visaoAtual ?? montarVisaoDemonstracao()),
+        );
+        setSegundosRestantes(INTERVALO_ATUALIZACAO_AUTOMATICA);
+        setAtualizando(false);
+      }
+
       return;
     }
 
@@ -197,10 +337,10 @@ export function PainelSistema() {
     } finally {
       setAtualizando(false);
     }
-  }, [roteador, servicoSimulacaoTrafego, tokenAcesso]);
+  }, [modoDemonstracao, roteador, servicoSimulacaoTrafego, tokenAcesso]);
 
   useEffect(() => {
-    if (!tokenAcesso) {
+    if (!tokenAcesso && !modoDemonstracao) {
       return;
     }
 
@@ -218,7 +358,7 @@ export function PainelSistema() {
       window.clearInterval(contador);
       window.clearInterval(atualizacaoAutomatica);
     };
-  }, [tokenAcesso, simularAgora]);
+  }, [modoDemonstracao, tokenAcesso, simularAgora]);
 
   function sair() {
     const confirmouSaida = window.confirm("Deseja sair do SmartGreen?");
@@ -228,7 +368,7 @@ export function PainelSistema() {
     }
 
     armazenamentoSessao.limparSessao();
-    roteador.push("/");
+    roteador.push(modoDemonstracao ? "/acesso" : "/");
   }
 
   const visaoSistemaAoVivo = useMemo(() => {
