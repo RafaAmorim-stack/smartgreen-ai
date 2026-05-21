@@ -62,7 +62,8 @@ async function bootstrap() {
   SwaggerModule.setup("api/docs", app, documentoSwagger);
 
   const port = Number(process.env.PORT ?? 4000);
-  await app.listen(port);
+  await app.listen(port, "0.0.0.0");
+  console.log(`SmartGreen API ouvindo em 0.0.0.0:${port}`);
 }
 
 void bootstrap();
