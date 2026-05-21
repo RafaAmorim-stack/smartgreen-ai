@@ -5,7 +5,7 @@
   "scripts": {
     "build": "nest build",
     "postinstall": "prisma generate",
-    "start": "node dist/main",
+    "start": "node dist/src/main",
     "start:dev": "nest start --watch",
     "deploy:start": "npm run prisma:migrate:deploy && npm run start",
     "prisma:generate": "prisma generate",
